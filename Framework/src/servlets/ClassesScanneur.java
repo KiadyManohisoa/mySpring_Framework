@@ -1,4 +1,4 @@
-package controlleur;
+package servlets;
 
 import java.net.URL;
 import java.io.*;
@@ -30,18 +30,22 @@ public class ClassesScanneur extends HttpServlet {
         this.checked = checked;
     }
 
-    void initVariables() {
+    void initVariables() throws Exception {
         String base = this.getInitParameter("base-package");
         try {
             basePackage = base;
             this.setFounded(new Util().getClassesByAnnotation(this.basePackage, Controlleur.class));
         } catch (Exception e) {
-            e.printStackTrace();
+            throw e;
         }
     }
 
     public void init() {
-        initVariables();
+        try {
+            initVariables();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -50,8 +54,12 @@ public class ClassesScanneur extends HttpServlet {
         PrintWriter out = response.getWriter();
         if (!this.isChecked()) { // haven't initalized variables yet
             // out.print("first time called this servlet");
-            initVariables();
-            this.setChecked(true);
+            try {
+                initVariables();
+                this.setChecked(true);
+            } catch (Exception err) {
+                out.println(err.getMessage());
+            }
         }
         try {
             out.println("Liste de  tous les controlleurs du projet actuel : ");

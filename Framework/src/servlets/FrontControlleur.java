@@ -1,4 +1,4 @@
-package controlleur;
+package servlets;
 
 import java.io.*;
 import jakarta.servlet.*;
