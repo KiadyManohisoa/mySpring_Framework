@@ -1,11 +1,11 @@
-package controller;
+package servlets;
 
 import java.io.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import java.util.*;
 
-public class FrontController extends HttpServlet {
+public class FrontControlleur extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
