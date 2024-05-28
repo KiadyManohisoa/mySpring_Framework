@@ -44,10 +44,17 @@ public class FindUrlsMethod extends HttpServlet {
 
         String servletPath = request.getServletPath();
         if (mappings.containsKey(servletPath)) {
-            out.println("Pour l'url : " + servletPath);
+            // out.println("Pour l'url : " + servletPath);
+            // MyMapping map = mappings.get(servletPath);
+            // out.println("<br/> La classe associée : " + map.getClassName());
+            // out.println("<br/> La méthode associée : " + map.getMethodName());
             MyMapping map = mappings.get(servletPath);
-            out.println("<br/> La classe associée : " + map.getClassName());
-            out.println("<br/> La méthode associée : " + map.getMethodName());
+            try {
+                out.println(map.invokeMethode());
+            } catch (Exception e) {
+                out.println(e.getMessage());
+            }
+
         } else {
             out.println("*** ERROR : URL NOT FOUND");
         }

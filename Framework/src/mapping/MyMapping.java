@@ -1,9 +1,24 @@
 package mapping;
 
+import java.lang.reflect.*;
+
 public class MyMapping {
 
     String className;
     String methodName;
+
+    @SuppressWarnings("deprecation")
+    public String invokeMethode() throws Exception {
+        String answer = null;
+        try {
+            Class<?> clazz = Class.forName(this.getClassName());
+            Method mConcerned = clazz.getDeclaredMethod(this.getMethodName());
+            answer = (String) mConcerned.invoke(clazz.newInstance(), new Object[] {});
+        } catch (Exception e) {
+            throw e;
+        }
+        return answer;
+    }
 
     public MyMapping(String className, String methodName) {
         this.setClassName(className);
