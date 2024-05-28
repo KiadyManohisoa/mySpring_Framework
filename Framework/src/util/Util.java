@@ -3,14 +3,31 @@ package util;
 import java.io.*;
 import java.util.*;
 import java.net.*;
+import java.lang.reflect.*;
+import java.lang.annotation.Annotation;
+import mapping.MyMapping;
 
 public class Util {
 
     public Util() {
     }
 
-    @SuppressWarnings("unchecked")
-    public List<Class<?>> getClassesByAnnotation(String basePackage, Class annotation) throws Exception {
+    public <T extends Annotation> void addMethodByAnnotation(Class<?> reference, Class<T> annotation,
+            HashMap<String, MyMapping> mapping)
+            throws Exception {
+        Method[] methods = reference.getDeclaredMethods();
+        for (int i = 0; i < methods.length; i++) {
+            if (methods[i].isAnnotationPresent(annotation)) {
+                T annotInstance = methods[i].getAnnotation(annotation);
+                Method valueMethod = annotation.getMethod("value");
+                String value = (String) valueMethod.invoke(annotInstance);
+                mapping.put(value, new MyMapping(reference.getName(), methods[i].getName()));
+            }
+        }
+    }
+
+    public <T extends Annotation> List<Class<?>> getClassesByAnnotation(String basePackage, Class<T> annotation)
+            throws Exception {
         List<Class<?>> lsClasses = new ArrayList<>();
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Enumeration<URL> resources = classLoader.getResources(basePackage.replace('.', '/'));
@@ -26,9 +43,10 @@ public class Util {
         return lsClasses;
     }
 
-    private void searchClassesInDirectory(List<Class<?>> classes, File directory, String basePackage,
+    <T extends Annotation> void searchClassesInDirectory(List<Class<?>> classes, File directory,
+            String basePackage,
             ClassLoader loader,
-            Class annotation) throws Exception {
+            Class<T> annotation) throws Exception {
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {
