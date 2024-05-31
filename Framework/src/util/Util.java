@@ -21,6 +21,11 @@ public class Util {
                 T annotInstance = methods[i].getAnnotation(annotation);
                 Method valueMethod = annotation.getMethod("value");
                 String value = (String) valueMethod.invoke(annotInstance);
+                if (mapping.containsKey(value)) {
+                    throw new RuntimeException(
+                            "***ERROR : L'url '" + value
+                                    + "' est associée plus d'une fois à une méthode, ce qui n'est pas permis");
+                }
                 mapping.put(value, new MyMapping(reference.getName(), methods[i].getName()));
             }
         }

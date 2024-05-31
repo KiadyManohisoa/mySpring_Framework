@@ -33,6 +33,10 @@ public class FindUrlsMethod extends HttpServlet {
         try {
             initVariables();
         } catch (Exception e) {
+            if (e instanceof RuntimeException) {
+                System.out.println(e.getMessage());
+                System.exit(1);
+            }
             e.printStackTrace();
         }
     }
@@ -50,7 +54,7 @@ public class FindUrlsMethod extends HttpServlet {
             // out.println("<br/> La méthode associée : " + map.getMethodName());
             MyMapping map = mappings.get(servletPath);
             try {
-                out.println(map.invokeMethode());
+                out.println(String.valueOf(map.invokeMethode()));
             } catch (Exception e) {
                 out.println(e.getMessage());
             }

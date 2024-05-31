@@ -8,12 +8,12 @@ public class MyMapping {
     String methodName;
 
     @SuppressWarnings("deprecation")
-    public String invokeMethode() throws Exception {
-        String answer = null;
+    public Object invokeMethode() throws Exception {
+        Object answer = null;
         try {
             Class<?> clazz = Class.forName(this.getClassName());
             Method mConcerned = clazz.getDeclaredMethod(this.getMethodName());
-            answer = (String) mConcerned.invoke(clazz.newInstance(), new Object[] {});
+            answer = mConcerned.invoke(clazz.newInstance(), new Object[] {});
         } catch (Exception e) {
             throw e;
         }
