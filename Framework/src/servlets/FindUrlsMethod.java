@@ -7,12 +7,35 @@ import jakarta.servlet.http.*;
 import java.util.*;
 import annotation.*;
 import util.*;
-import mapping.MyMapping;
+import mapping.*;
 
 public class FindUrlsMethod extends HttpServlet {
 
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
+
+    void resolveUrl(Object valToHandle, PrintWriter out, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        if (valToHandle instanceof String) {
+            out.println((String) valToHandle);
+        } else if (valToHandle instanceof ModelView) {
+            ModelView mv = (ModelView) valToHandle;
+            try {
+                RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+                if (!mv.getData().isEmpty()) {
+                    HashMap<String, Object> datas = mv.getData();
+                    Iterator<String> keys = datas.keySet().iterator();
+                    while (keys.hasNext()) {
+                        String dataKey = keys.next();
+                        request.setAttribute(dataKey, datas.get(dataKey));
+                    }
+                }
+                dispatcher.forward(request, response);
+            } catch (Exception e) {
+                throw e;
+            }
+        }
+    }
 
     void initVariables() throws Exception {
         String base = this.getInitParameter("base-package");
@@ -48,13 +71,10 @@ public class FindUrlsMethod extends HttpServlet {
 
         String servletPath = request.getServletPath();
         if (mappings.containsKey(servletPath)) {
-            // out.println("Pour l'url : " + servletPath);
-            // MyMapping map = mappings.get(servletPath);
-            // out.println("<br/> La classe associée : " + map.getClassName());
-            // out.println("<br/> La méthode associée : " + map.getMethodName());
             MyMapping map = mappings.get(servletPath);
             try {
-                out.println(String.valueOf(map.invokeMethode()));
+                Object valueToHandle = map.invokeMethode();
+                this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
                 out.println(e.getMessage());
             }
