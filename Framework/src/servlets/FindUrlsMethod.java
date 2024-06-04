@@ -34,6 +34,9 @@ public class FindUrlsMethod extends HttpServlet {
             } catch (Exception e) {
                 throw e;
             }
+        } else {
+            throw new Exception("Le type de retour " + valToHandle.getClass().getName()
+                    + " n'est pas pris en charge pour l'assignation d'url");
         }
     }
 
@@ -76,7 +79,7 @@ public class FindUrlsMethod extends HttpServlet {
                 Object valueToHandle = map.invokeMethode();
                 this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
-                out.println(e.getMessage());
+                out.println("*** ERROR : " + e.getMessage());
             }
 
         } else {

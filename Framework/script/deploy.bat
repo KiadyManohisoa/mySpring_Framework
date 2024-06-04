@@ -12,7 +12,6 @@ set "testPath=D:\ITU\S4\Web_Dynamique(Mr_Naina)\mySpring_Framework\Test\"
 
 rem création de tempJava et binPath
 mkdir "%tempJava%"
-mkdir "%binPath%"
 
 :: Parcourir récursivement tous les fichiers .java dans src et les copier dans tempJava
 for /r "%srcPath%" %%f in (*.java) do (
