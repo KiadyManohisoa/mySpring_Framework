@@ -14,6 +14,16 @@ public class FrontControlleur extends HttpServlet {
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
 
+    boolean checkBuildError() {
+        boolean result = false;
+        String buildErr = (String) this.getServletContext().getAttribute("buildError");
+        if (buildErr != null) {
+            System.out.println("*** ERROR : " + buildErr);
+            result = true;
+        }
+        return result;
+    }
+
     void resolveUrl(Object valToHandle, PrintWriter out, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
         if (valToHandle instanceof String) {
@@ -60,10 +70,11 @@ public class FrontControlleur extends HttpServlet {
             initVariables();
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
-                System.out.println("\n*** ERROR : " + e.getMessage() + "\n");
-                System.exit(1);
+                this.getServletContext().setAttribute("buildError", e.getMessage());
+                // System.out.println("\n*** ERROR : " + e.getMessage() + "\n");
+                // System.exit(1);
             }
-            e.printStackTrace();
+            // System.out.println("\n*** ERROR : " + e.getMessage() + "\n");
         }
     }
 
@@ -71,6 +82,10 @@ public class FrontControlleur extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
+
+        if (this.checkBuildError()) {
+            return;
+        }
 
         String servletPath = request.getServletPath();
         if (mappings.containsKey(servletPath)) {
