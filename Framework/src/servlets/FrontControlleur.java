@@ -18,7 +18,7 @@ public class FrontControlleur extends HttpServlet {
         boolean result = false;
         String buildErr = (String) this.getServletContext().getAttribute("buildError");
         if (buildErr != null) {
-            System.out.println("*** ERROR : " + buildErr);
+            System.out.println("\n*** ERROR : " + buildErr+"\n");
             result = true;
         }
         return result;
