@@ -23,8 +23,8 @@ public class Util {
                 String value = (String) valueMethod.invoke(annotInstance);
                 if (mapping.containsKey(value)) {
                     throw new RuntimeException(
-                            "***ERROR : L'url '" + value
-                                    + "' est associée plus d'une fois à une méthode, ce qui n'est pas permis");
+                            "L'url '" + value
+                                    + "' est associée plus d'une fois à deux ou plusieurs méthodes, ce qui n'est pas permis");
                 }
                 mapping.put(value, new MyMapping(reference.getName(), methods[i].getName()));
             }
@@ -35,14 +35,26 @@ public class Util {
             throws Exception {
         List<Class<?>> lsClasses = new ArrayList<>();
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        Enumeration<URL> resources = classLoader.getResources(basePackage.replace('.', '/'));
+        Enumeration<URL> ressources = classLoader.getResources(basePackage.replace('.', '/'));
+        boolean search = false; // initialement inexistant
 
-        while (resources.hasMoreElements()) {
-            URL resource = resources.nextElement();
+        while (ressources.hasMoreElements()) {
+            URL resource = ressources.nextElement();
             File directory = new File(URLDecoder.decode(resource.getFile(), "UTF-8"));
             if (directory.isDirectory()) {
+                if (directory.listFiles().length == 0) {
+                    throw new RuntimeException("Le dossier à scanner " + basePackage + " pour l'annotation "
+                            + annotation.getName() + " est vide");
+                }
+                search = true; // est un dossier et n'est pas vide
                 searchClassesInDirectory(lsClasses, directory, basePackage, classLoader, annotation);
             }
+        }
+
+        if (!search) {
+            throw new RuntimeException("Le dossier à scanner " + basePackage + " pour l'annotation "
+                    + annotation.getName() + " n'existe pas");
+
         }
 
         return lsClasses;
