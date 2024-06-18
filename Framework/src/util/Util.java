@@ -12,6 +12,13 @@ public class Util {
     public Util() {
     }
 
+    String checkUrlValue(String url) {
+        if (url.contains("?")) {
+            return url.substring(0, url.indexOf("?"));
+        }
+        return url;
+    }
+
     public <T extends Annotation> void addMethodByAnnotation(Class<?> reference, Class<T> annotation,
             HashMap<String, MyMapping> mapping)
             throws Exception {
@@ -21,12 +28,14 @@ public class Util {
                 T annotInstance = methods[i].getAnnotation(annotation);
                 Method valueMethod = annotation.getMethod("value");
                 String value = (String) valueMethod.invoke(annotInstance);
+                value = this.checkUrlValue(value);
+                System.out.println("value : " + value);
                 if (mapping.containsKey(value)) {
                     throw new RuntimeException(
                             "L'url '" + value
                                     + "' est associée plus d'une fois à deux ou plusieurs méthodes, ce qui n'est pas permis");
                 }
-                mapping.put(value, new MyMapping(reference.getName(), methods[i].getName()));
+                mapping.put(value, new MyMapping(reference.getName(), methods[i]));
             }
         }
     }

@@ -5,14 +5,14 @@ import java.lang.reflect.*;
 public class MyMapping {
 
     String className;
-    String methodName;
+    Method method;
 
     @SuppressWarnings("deprecation")
     public Object invokeMethode() throws Exception {
         Object answer = null;
         try {
             Class<?> clazz = Class.forName(this.getClassName());
-            Method mConcerned = clazz.getDeclaredMethod(this.getMethodName());
+            Method mConcerned = clazz.getDeclaredMethod(this.getMethod().getName());
             answer = mConcerned.invoke(clazz.newInstance(), new Object[] {});
         } catch (Exception e) {
             throw e;
@@ -20,9 +20,9 @@ public class MyMapping {
         return answer;
     }
 
-    public MyMapping(String className, String methodName) {
+    public MyMapping(String className, Method method) {
         this.setClassName(className);
-        this.setMethodName(methodName);
+        this.setMethod(method);
     }
 
     public String getClassName() {
@@ -33,12 +33,12 @@ public class MyMapping {
         this.className = className;
     }
 
-    public String getMethodName() {
-        return methodName;
+    public Method getMethod() {
+        return method;
     }
 
-    public void setMethodName(String methodName) {
-        this.methodName = methodName;
+    public void setMethod(Method method) {
+        this.method = method;
     }
 
 }
