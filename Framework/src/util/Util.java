@@ -29,7 +29,6 @@ public class Util {
                 Method valueMethod = annotation.getMethod("value");
                 String value = (String) valueMethod.invoke(annotInstance);
                 value = this.checkUrlValue(value);
-                System.out.println("value : " + value);
                 if (mapping.containsKey(value)) {
                     throw new RuntimeException(
                             "L'url '" + value

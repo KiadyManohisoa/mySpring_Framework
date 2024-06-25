@@ -27,37 +27,12 @@ public class FrontControlleur extends HttpServlet {
             if (!parameterMap.isEmpty()) {
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Method mConcerned = mapping.getMethod();
-                Parameter[] mParameters = mConcerned.getParameters();
-                Object[] invokeParams = new Object[mParameters.length];
-                boolean[] paramsAssignation = new boolean[mParameters.length];
-                Convertor convertor = new Convertor();
-                for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
-                    String inputName = entry.getKey();
-                    String[] inputValue = entry.getValue();
+                Parameter[] methodParameters = mConcerned.getParameters();
+                Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap, methodParameters);
 
-                    for (int i = 0; i < mParameters.length; i++) {
-                        if (!paramsAssignation[i]) {
-                            RequestParameter annotation = mParameters[i].getAnnotation(RequestParameter.class);
-                            if (annotation != null && inputName.equals(annotation.value())) {
-                                invokeParams[i] = convertor.convertInputToParam(inputValue[0],
-                                        mParameters[i].getType());
-                                paramsAssignation[i] = true;
-                                break;
-                            } else if (inputName.equals(mParameters[i].getName())) {
-                                invokeParams[i] = convertor.convertInputToParam(inputValue[0],
-                                        mParameters[i].getType());
-                                paramsAssignation[i] = true;
-                                break;
-                            } else {
-                                invokeParams[i] = convertor.getDefaultValue(mParameters[i].getType());
-                                paramsAssignation[i] = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                Object object = mConcerned.invoke(clazz.getDeclaredConstructor().newInstance(),
+                        invokeParams);
 
-                Object object = mConcerned.invoke(clazz.newInstance(), invokeParams);
                 this.resolveUrl(object, out, request, response);
                 return true;
             }
@@ -148,8 +123,7 @@ public class FrontControlleur extends HttpServlet {
                 Object valueToHandle = map.invokeMethode();
                 this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
-                e.printStackTrace();
-                // out.println("*** ERROR : " + e.printStackTrace(););
+                out.println("*** ERROR : " + e.getMessage());
             }
 
         } else {
