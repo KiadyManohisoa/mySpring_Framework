@@ -123,7 +123,10 @@ public class FrontControlleur extends HttpServlet {
                 Object valueToHandle = map.invokeMethode();
                 this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
-                out.println("*** ERROR : " + e.getMessage());
+                RequestDispatcher dispatcher = request
+                        .getRequestDispatcher("/WEB-INF/lib/error.jsp");
+                request.setAttribute("error", "ETU2375 : " + e.getMessage());
+                dispatcher.forward(request, response);
             }
 
         } else {

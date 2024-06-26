@@ -15,6 +15,8 @@ public class Reflect {
         Convertor convertor = new Convertor();
         Reflect reflect = new Reflect();
 
+        this.checkParameters(mParameters);
+
         int j = 0;
         for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
             String inputName = entry.getKey();
@@ -62,6 +64,21 @@ public class Reflect {
         }
 
         return invokeParams;
+    }
+
+    void checkParameters(Parameter[] parameters) throws Exception {
+        String error = new String();
+        for (int i = 0; i < parameters.length; i++) {
+            if (!parameters[i].isAnnotationPresent(RequestParameter.class)) {
+                if (i != 0) {
+                    error += ", ";
+                }
+                error += "le paramètre " + parameters[i].getName();
+            }
+        }
+        if (!error.isEmpty()) {
+            throw new Exception("Veuillez annoter " + error);
+        }
     }
 
     Object getParameterValue(String inputName, String inputValue, Parameter parameter, Convertor convertor)
