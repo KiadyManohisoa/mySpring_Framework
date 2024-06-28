@@ -12,16 +12,21 @@ public class Convertor {
     }
 
     public Object convertInputToParam(String inputValue, Class<?> paramType) throws Exception {
-        if (paramType.equals(int.class) || paramType.equals(Integer.class)) {
-            return Integer.parseInt(inputValue);
-        } else if (paramType.equals(double.class) || paramType.equals(Double.class)) {
-            return Double.parseDouble(inputValue);
-        } else if (paramType.equals(float.class) || paramType.equals(Float.class)) {
-            return Float.parseFloat(inputValue);
-        } else if (paramType.equals(String.class)) {
-            return inputValue;
-        } else {
-            throw new IllegalArgumentException("Type de paramètre non pris en charge: " + paramType);
+        try {
+            if (paramType.equals(int.class) || paramType.equals(Integer.class)) {
+                return Integer.parseInt(inputValue);
+            } else if (paramType.equals(double.class) || paramType.equals(Double.class)) {
+                return Double.parseDouble(inputValue);
+            } else if (paramType.equals(float.class) || paramType.equals(Float.class)) {
+                return Float.parseFloat(inputValue);
+            } else if (paramType.equals(String.class)) {
+                return inputValue;
+            } else {
+                throw new IllegalArgumentException("Type de paramètre non pris en charge: " + paramType);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException(
+                    "Erreur de cast pour la valeur: " + inputValue + " et le type: " + paramType, e);
         }
     }
 

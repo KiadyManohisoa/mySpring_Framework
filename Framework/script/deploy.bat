@@ -9,6 +9,7 @@ set "libPath=..\lib\"
 set "binPath=..\bin\"
 set "tempJava=..\tempJava\"
 set "testPath=D:\ITU\S4\Web_Dynamique(Mr_Naina)\mySpring_Framework\Test\"
+set "errorHandler=..\error_manager\error.jsp"
 
 rem création de tempJava et binPath
 mkdir "%tempJava%"
@@ -31,7 +32,9 @@ popd
 rem copie de jar vers lib de test Path
 xcopy "%binPath%\%jarName%.jar" %testPath%\lib /Y
 
+rem copie de error manager vers test Path 
+xcopy "%errorHandler%" %testPath%\lib /Y
+
 rem suppression de tempJava 
 rmdir /s /q "%tempJava%"
 rmdir /s /q "%binPath%"
-
