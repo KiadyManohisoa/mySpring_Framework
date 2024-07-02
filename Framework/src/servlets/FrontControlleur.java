@@ -30,8 +30,13 @@ public class FrontControlleur extends HttpServlet {
                 Parameter[] methodParameters = mConcerned.getParameters();
                 Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap, methodParameters);
 
-                Object object = mConcerned.invoke(clazz.getDeclaredConstructor().newInstance(),
-                        invokeParams);
+                Object invokingObject = clazz.getDeclaredConstructor().newInstance();
+                int idField = mapping.checkSession(invokingObject, request);
+                if (idField != -1) {
+                    mapping.updateSession(invokingObject, request, idField);
+                }
+
+                Object object = mConcerned.invoke(invokingObject, invokeParams);
 
                 this.resolveUrl(object, out, request, response);
                 return true;
@@ -120,7 +125,7 @@ public class FrontControlleur extends HttpServlet {
                 if (this.isTherePostRequest(request, response, out, map)) {
                     return;
                 }
-                Object valueToHandle = map.invokeMethode();
+                Object valueToHandle = map.invokeMethode(request);
                 this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
