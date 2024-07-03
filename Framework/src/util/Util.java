@@ -12,6 +12,14 @@ public class Util {
     public Util() {
     }
 
+    public static boolean isClassNotPresent(Class<?>[] classes, Class<?> targetClass) {
+        Set<Class<?>> classSet = new HashSet<>();
+        for (Class<?> clazz : classes) {
+            classSet.add(clazz);
+        }
+        return !classSet.contains(targetClass);
+    }
+
     String checkUrlValue(String url) {
         if (url.contains("?")) {
             return url.substring(0, url.indexOf("?"));
