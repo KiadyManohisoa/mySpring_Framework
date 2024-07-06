@@ -3,19 +3,23 @@ package util;
 import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 
 import annotation.FieldParameter;
 import annotation.RequestParameter;
+import mapping.MySession;
 
 public class Reflect {
 
-    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters) throws Exception {
+    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters, Object invokingObj,
+            HttpServletRequest request)
+            throws Exception {
         Object[] invokeParams = new Object[mParameters.length];
         HashMap<String, Integer> paramsAssignationMap = new HashMap<>();
         Convertor convertor = new Convertor();
         Reflect reflect = new Reflect();
 
-        this.checkParameters(mParameters);
+        this.checkParameters(mParameters, new Class<?>[] { MySession.class });
 
         int j = 0;
         for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
@@ -54,11 +58,18 @@ public class Reflect {
         // // Ensure all parameters are assigned a value
         for (int i = 0; i < mParameters.length; i++) {
             if (invokeParams[i] == null) {
-                if (mParameters[i].getType().isPrimitive()) {
-                    invokeParams[i] = convertor.getDefaultValue(mParameters[i].getType());
-                } else {
+                if (mParameters[i].getType().equals(MySession.class)) {
                     Class<?> clazz = Class.forName(mParameters[i].getType().getName());
-                    invokeParams[i] = clazz.getDeclaredConstructor().newInstance();
+                    MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
+                    mySession.setSession(request.getSession());
+                    invokeParams[i] = mySession;
+                } else {
+                    if (mParameters[i].getType().isPrimitive()) {
+                        invokeParams[i] = convertor.getDefaultValue(mParameters[i].getType());
+                    } else {
+                        Class<?> clazz = Class.forName(mParameters[i].getType().getName());
+                        invokeParams[i] = clazz.getDeclaredConstructor().newInstance();
+                    }
                 }
             }
         }
@@ -66,14 +77,16 @@ public class Reflect {
         return invokeParams;
     }
 
-    void checkParameters(Parameter[] parameters) throws Exception {
+    void checkParameters(Parameter[] parameters, Class<?>[] notToCheck) throws Exception {
         String error = new String();
         for (int i = 0; i < parameters.length; i++) {
-            if (!parameters[i].isAnnotationPresent(RequestParameter.class)) {
-                if (i != 0) {
-                    error += ", ";
+            if (Util.isClassNotPresent(notToCheck, parameters[i].getType())) {
+                if (!parameters[i].isAnnotationPresent(RequestParameter.class)) {
+                    if (i != 0) {
+                        error += ", ";
+                    }
+                    error += "le paramètre " + parameters[i].getName();
                 }
-                error += "le paramètre " + parameters[i].getName();
             }
         }
         if (!error.isEmpty()) {

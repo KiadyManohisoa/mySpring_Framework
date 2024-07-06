@@ -35,6 +35,6 @@ xcopy "%binPath%\%jarName%.jar" %testPath%\lib /Y
 rem copie de error manager vers test Path 
 xcopy "%errorHandler%" %testPath%\lib /Y
 
-rem suppression de tempJava 
+rem suppression de tempJava et binPath
 rmdir /s /q "%tempJava%"
 rmdir /s /q "%binPath%"

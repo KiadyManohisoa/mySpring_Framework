@@ -17,6 +17,18 @@ public class FrontControlleur extends HttpServlet {
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
 
+    public void checkSession(Object invokingObj, HttpServletRequest request) throws Exception {
+        Field[] fields = invokingObj.getClass().getDeclaredFields();
+        for (int i = 0; i < fields.length; i++) {
+            if (fields[i].getType().equals(MySession.class)) {
+                Method method = invokingObj.getClass()
+                        .getDeclaredMethod("get" + Syntaxe.getSetterNorm(fields[i].getName()));
+                MySession mySession = (MySession) method.invoke(invokingObj);
+                mySession.setSession(request.getSession());
+            }
+        }
+    }
+
     @SuppressWarnings("deprecation")
     boolean isTherePostRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter out,
             MyMapping mapping)
@@ -28,10 +40,14 @@ public class FrontControlleur extends HttpServlet {
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Method mConcerned = mapping.getMethod();
                 Parameter[] methodParameters = mConcerned.getParameters();
-                Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap, methodParameters);
+                Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
-                Object object = mConcerned.invoke(clazz.getDeclaredConstructor().newInstance(),
-                        invokeParams);
+                Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap,
+                        methodParameters, invokingObject, request);
+
+                this.checkSession(invokingObject, request);
+
+                Object object = mConcerned.invoke(invokingObject, invokeParams);
 
                 this.resolveUrl(object, out, request, response);
                 return true;
@@ -120,12 +136,12 @@ public class FrontControlleur extends HttpServlet {
                 if (this.isTherePostRequest(request, response, out, map)) {
                     return;
                 }
-                Object valueToHandle = map.invokeMethode();
+                Object valueToHandle = map.invokeMethode(request);
                 this.resolveUrl(valueToHandle, out, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
-                request.setAttribute("error", "ETU2375 : " + e.getMessage());
+                request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
                 dispatcher.forward(request, response);
             }
 

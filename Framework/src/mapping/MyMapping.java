@@ -1,23 +1,56 @@
 package mapping;
 
 import java.lang.reflect.*;
+import jakarta.servlet.http.*;
+import servlets.FrontControlleur;
+import util.Convertor;
+import util.Syntaxe;
 
 public class MyMapping {
 
     String className;
     Method method;
 
+    Object[] initializeParameters(Method method, HttpServletRequest request) throws Exception {
+        Parameter[] parameters = method.getParameters();
+        Object[] invObjects = new Object[parameters.length];
+        Convertor convertor = new Convertor();
+
+        for (int i = 0; i < parameters.length; i++) {
+            Class<?> paramType = parameters[i].getType();
+
+            if (paramType.equals(MySession.class)) {
+                MySession mySession = (MySession) paramType.getDeclaredConstructor().newInstance();
+                mySession.setSession(request.getSession());
+                invObjects[i] = mySession;
+            } else if (paramType.isPrimitive()) {
+                invObjects[i] = convertor.getDefaultValue(paramType);
+            } else {
+                invObjects[i] = paramType.getDeclaredConstructor().newInstance();
+            }
+        }
+
+        return invObjects;
+    }
+
     @SuppressWarnings("deprecation")
-    public Object invokeMethode() throws Exception {
-        Object answer = null;
+    public Object invokeMethode(HttpServletRequest request) throws Exception {
         try {
             Class<?> clazz = Class.forName(this.getClassName());
-            Method mConcerned = clazz.getDeclaredMethod(this.getMethod().getName());
-            answer = mConcerned.invoke(clazz.newInstance(), new Object[] {});
+            Method mConcerned = this.getMethod();
+            Object invokingObject = clazz.getDeclaredConstructor().newInstance();
+
+            Object[] invObjects = initializeParameters(mConcerned, request);
+
+            if (invObjects.length > 0) {
+                return mConcerned.invoke(invokingObject, invObjects);
+            } else {
+                new FrontControlleur().checkSession(invokingObject, request);
+                return mConcerned.invoke(invokingObject);
+            }
         } catch (Exception e) {
             throw e;
         }
-        return answer;
     }
 
     public MyMapping(String className, Method method) {
