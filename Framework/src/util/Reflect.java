@@ -61,7 +61,8 @@ public class Reflect {
                 if (mParameters[i].getType().equals(MySession.class)) {
                     Class<?> clazz = Class.forName(mParameters[i].getType().getName());
                     MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
-                    mySession.setSession(request.getSession());
+                    mySession.setKeyValues(request.getSession());
+                    // mySession.setSession(request.getSession());
                     invokeParams[i] = mySession;
                 } else {
                     if (mParameters[i].getType().isPrimitive()) {

@@ -17,17 +17,47 @@ public class FrontControlleur extends HttpServlet {
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
 
-    public void checkSession(Object invokingObj, HttpServletRequest request) throws Exception {
+    public void printHttpSession(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        System.out.println("Here are the session " + session.getId() + "key_values");
+        Enumeration<String> sessionKeys = session.getAttributeNames();
+        while (sessionKeys.hasMoreElements()) {
+            String key = sessionKeys.nextElement();
+            System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
+        }
+        System.out.println();
+    }
+
+    public Runnable checkSession(Object invokingObj, HttpServletRequest request) throws Exception {
         Field[] fields = invokingObj.getClass().getDeclaredFields();
+        MySession mySession = null;
+
         for (int i = 0; i < fields.length; i++) {
             if (fields[i].getType().equals(MySession.class)) {
                 Method method = invokingObj.getClass()
                         .getDeclaredMethod("get" + Syntaxe.getSetterNorm(fields[i].getName()));
-                MySession mySession = (MySession) method.invoke(invokingObj);
-                mySession.setSession(request.getSession());
+                mySession = (MySession) method.invoke(invokingObj);
+                mySession.setKeyValues(request.getSession());
             }
         }
+        System.out.println("here we are manipulating MySession");
+
+        if (mySession != null) { // if there is a field session, we return the callback in order to update the
+                                 // session
+            MySession finalSession = mySession;
+            return () -> {
+                // System.out.println("Updating HTTP session in callback \n Status :");
+                // finalSession.print();
+                finalSession.updateHttpSession(request.getSession());
+            };
+        }
+
+        // if there was no field session, we return an empty callback
+        return () -> {
+        };
     }
+
+    // mySession.setSession(request.getSession());
 
     @SuppressWarnings("deprecation")
     boolean isTherePostRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter out,
@@ -45,9 +75,13 @@ public class FrontControlleur extends HttpServlet {
                 Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap,
                         methodParameters, invokingObject, request);
 
-                this.checkSession(invokingObject, request);
+                this.printHttpSession(request);
 
+                Runnable sessionCallback = this.checkSession(invokingObject, request);
                 Object object = mConcerned.invoke(invokingObject, invokeParams);
+                sessionCallback.run();
+
+                this.printHttpSession(request);
 
                 this.resolveUrl(object, out, request, response);
                 return true;
@@ -136,8 +170,9 @@ public class FrontControlleur extends HttpServlet {
                 if (this.isTherePostRequest(request, response, out, map)) {
                     return;
                 }
-                Object valueToHandle = map.invokeMethode(request);
-                this.resolveUrl(valueToHandle, out, request, response);
+                Object[] valueToHandle = map.invokeMethode(request);
+                ((Runnable) valueToHandle[1]).run();
+                this.resolveUrl(valueToHandle[0], out, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");

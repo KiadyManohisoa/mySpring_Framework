@@ -21,7 +21,7 @@ public class MyMapping {
 
             if (paramType.equals(MySession.class)) {
                 MySession mySession = (MySession) paramType.getDeclaredConstructor().newInstance();
-                mySession.setSession(request.getSession());
+                // mySession.setSession(request.getSession());
                 invObjects[i] = mySession;
             } else if (paramType.isPrimitive()) {
                 invObjects[i] = convertor.getDefaultValue(paramType);
@@ -34,7 +34,12 @@ public class MyMapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object invokeMethode(HttpServletRequest request) throws Exception {
+    public Object[] invokeMethode(HttpServletRequest request) throws Exception {
+        Object[] toReturn = new Object[2];
+        toReturn[0] = new Object();
+        Runnable callback = () -> {
+        };
+        toReturn[1] = callback;
         try {
             Class<?> clazz = Class.forName(this.getClassName());
             Method mConcerned = this.getMethod();
@@ -43,14 +48,16 @@ public class MyMapping {
             Object[] invObjects = initializeParameters(mConcerned, request);
 
             if (invObjects.length > 0) {
-                return mConcerned.invoke(invokingObject, invObjects);
+                toReturn[0] = mConcerned.invoke(invokingObject, invObjects);
             } else {
-                new FrontControlleur().checkSession(invokingObject, request);
-                return mConcerned.invoke(invokingObject);
+                new FrontControlleur().printHttpSession(request);
+                toReturn[1] = new FrontControlleur().checkSession(invokingObject, request);
+                toReturn[0] = mConcerned.invoke(invokingObject);
             }
         } catch (Exception e) {
             throw e;
         }
+        return toReturn;
     }
 
     public MyMapping(String className, Method method) {
