@@ -1,6 +1,7 @@
 package util;
 
 import java.lang.reflect.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,9 +12,13 @@ import mapping.MySession;
 
 public class Reflect {
 
-    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters, Object invokingObj,
+    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
+            Object invokingObj,
             HttpServletRequest request)
             throws Exception {
+        Object[] answers = new Object[2];
+        Runnable callback = () -> {
+        };
         Object[] invokeParams = new Object[mParameters.length];
         HashMap<String, Integer> paramsAssignationMap = new HashMap<>();
         Convertor convertor = new Convertor();
@@ -62,6 +67,9 @@ public class Reflect {
                     Class<?> clazz = Class.forName(mParameters[i].getType().getName());
                     MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
                     mySession.setKeyValues(request.getSession());
+                    callback = () -> {
+                        mySession.updateHttpSession(request.getSession());
+                    };
                     // mySession.setSession(request.getSession());
                     invokeParams[i] = mySession;
                 } else {
@@ -74,8 +82,10 @@ public class Reflect {
                 }
             }
         }
+        answers[0] = callback;
+        answers[1] = invokeParams;
 
-        return invokeParams;
+        return answers;
     }
 
     void checkParameters(Parameter[] parameters, Class<?>[] notToCheck) throws Exception {

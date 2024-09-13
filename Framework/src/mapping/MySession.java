@@ -27,11 +27,12 @@ public class MySession {
 
     public void updateHttpSession(HttpSession session) {
         this.clearHttpSession(session);
-        for (Map.Entry<String, Object> entry : this.getKeyValues().entrySet()) {
-            session.setAttribute(entry.getKey(), entry.getValue());
-        }
         if (this.makeInvalid) {
             session.invalidate();
+            return;
+        }
+        for (Map.Entry<String, Object> entry : this.getKeyValues().entrySet()) {
+            session.setAttribute(entry.getKey(), entry.getValue());
         }
     }
 
