@@ -17,20 +17,78 @@ public class FrontControlleur extends HttpServlet {
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
 
-    public void checkSession(Object invokingObj, HttpServletRequest request) throws Exception {
+    public void printHttpSession(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        System.out.println("Here are the session " + session.getId() + "key_values");
+        Enumeration<String> sessionKeys = session.getAttributeNames();
+        while (sessionKeys.hasMoreElements()) {
+            String key = sessionKeys.nextElement();
+            System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
+        }
+        System.out.println();
+    }
+
+    public Runnable checkSessionParam(MyMapping map, HttpServletRequest request) throws Exception {
+        Method mConcerned = map.getMethod();
+        Parameter[] mParameters = mConcerned.getParameters();
+        MySession mySession = null;
+        for (int i = 0; i < mParameters.length; i++) {
+            if (mParameters[i].getType().equals(MySession.class)) {
+                Class<?> clazz = Class.forName(mParameters[i].getType().getName());
+                mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
+                mySession.setKeyValues(request.getSession());
+                break;
+            }
+        }
+        if (mySession != null) {
+            MySession finalSession = mySession;
+            return () -> {
+                finalSession.updateHttpSession(request.getSession());
+            };
+        }
+
+        return () -> {
+        };
+
+    }
+
+    public Runnable checkSessionField(Object invokingObj, HttpServletRequest request) throws Exception {
         Field[] fields = invokingObj.getClass().getDeclaredFields();
+        MySession mySession = null;
+
         for (int i = 0; i < fields.length; i++) {
             if (fields[i].getType().equals(MySession.class)) {
                 Method method = invokingObj.getClass()
                         .getDeclaredMethod("get" + Syntaxe.getSetterNorm(fields[i].getName()));
-                MySession mySession = (MySession) method.invoke(invokingObj);
-                mySession.setSession(request.getSession());
+                mySession = (MySession) method.invoke(invokingObj);
+                mySession.setKeyValues(request.getSession());
+                break;
             }
         }
+        // System.out.println("here we are manipulating MySession");
+
+        if (mySession != null) { // if there is a field session, we return the callback in order to update the
+                                 // session
+            MySession finalSession = mySession;
+            return () -> {
+                // System.out.println("Updating HTTP session in callback \n Status :");
+                // finalSession.print();
+                finalSession.updateHttpSession(request.getSession());
+            };
+        }
+
+        // if there was no field session, we return an empty callback
+        return () -> {
+        };
+    }
+
+    void checkGetRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Object valueToHandle = map.invokeMethode(request);
+        new FrontControlleur().resolveUrl(valueToHandle, request, response);
     }
 
     @SuppressWarnings("deprecation")
-    boolean isTherePostRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter out,
+    boolean isTherePostRequest(HttpServletRequest request, HttpServletResponse response,
             MyMapping mapping)
             throws Exception {
         try {
@@ -45,11 +103,15 @@ public class FrontControlleur extends HttpServlet {
                 Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap,
                         methodParameters, invokingObject, request);
 
-                this.checkSession(invokingObject, request);
+                // case MySession as a field
+                Runnable sessionCallbackAsField = this.checkSessionField(invokingObject, request);
+                Object object = mConcerned.invoke(invokingObject, (Object[]) invokeParams[1]);
+                sessionCallbackAsField.run();
 
-                Object object = mConcerned.invoke(invokingObject, invokeParams);
+                // case MySession as a parameter
+                ((Runnable) invokeParams[0]).run();
 
-                this.resolveUrl(object, out, request, response);
+                this.resolveUrl(object, request, response);
                 return true;
             }
         } catch (Exception e) {
@@ -68,8 +130,9 @@ public class FrontControlleur extends HttpServlet {
         return result;
     }
 
-    void resolveUrl(Object valToHandle, PrintWriter out, HttpServletRequest request, HttpServletResponse response)
+    void resolveUrl(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
+        PrintWriter out = response.getWriter();
         if (valToHandle instanceof String) {
             out.println((String) valToHandle);
         } else if (valToHandle instanceof ModelView) {
@@ -133,15 +196,17 @@ public class FrontControlleur extends HttpServlet {
         if (mappings.containsKey(servletPath)) {
             MyMapping map = mappings.get(servletPath);
             try {
-                if (this.isTherePostRequest(request, response, out, map)) {
+                // post request case
+                if (this.isTherePostRequest(request, response, map)) {
                     return;
                 }
-                Object valueToHandle = map.invokeMethode(request);
-                this.resolveUrl(valueToHandle, out, request, response);
+                // get request case
+                this.checkGetRequest(map, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
+                e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
