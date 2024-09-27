@@ -86,7 +86,12 @@ public class FrontControlleur extends HttpServlet {
 
     void checkGetRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Object valueToHandle = map.invokeMethode(request);
-        if (map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
+        // case restApi annotation in class :
+        // if(map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
+
+        // case restApi annotation in method
+        if (map.getMethod().isAnnotationPresent(RestApi.class)
+                || map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
             resolveRestRequest(valueToHandle, request, response);
         } else {
             new FrontControlleur().resolveUrl(valueToHandle, request, response);
