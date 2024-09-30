@@ -12,23 +12,21 @@ import annotation.*;
 import util.*;
 import mapping.*;
 
-import com.google.gson.Gson;
-
 public class FrontControlleur extends HttpServlet {
 
     private String basePackage;
     HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
 
-    // public void printHttpSession(HttpServletRequest request) {
-    // HttpSession session = request.getSession();
-    // System.out.println("Here are the session " + session.getId() + "key_values");
-    // Enumeration<String> sessionKeys = session.getAttributeNames();
-    // while (sessionKeys.hasMoreElements()) {
-    // String key = sessionKeys.nextElement();
-    // System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
-    // }
-    // System.out.println();
-    // }
+    public void printHttpSession(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        System.out.println("Here are the session " + session.getId() + "key_values");
+        Enumeration<String> sessionKeys = session.getAttributeNames();
+        while (sessionKeys.hasMoreElements()) {
+            String key = sessionKeys.nextElement();
+            System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
+        }
+        System.out.println();
+    }
 
     public Runnable checkSessionParam(MyMapping map, HttpServletRequest request) throws Exception {
         Method mConcerned = map.getMethod();
@@ -86,16 +84,7 @@ public class FrontControlleur extends HttpServlet {
 
     void checkGetRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Object valueToHandle = map.invokeMethode(request);
-        // case restApi annotation in class :
-        // if(map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
-
-        // case restApi annotation in method
-        if (map.getMethod().isAnnotationPresent(RestApi.class)
-                || map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
-            resolveRestRequest(valueToHandle, request, response);
-        } else {
-            new FrontControlleur().resolveUrl(valueToHandle, request, response);
-        }
+        new FrontControlleur().resolveUrl(valueToHandle, request, response);
     }
 
     @SuppressWarnings("deprecation")
@@ -141,34 +130,9 @@ public class FrontControlleur extends HttpServlet {
         return result;
     }
 
-    void resolveRestRequest(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
-            throws Exception {
-        response.setContentType("application/json");
-        Gson gson = new Gson();
-        try {
-            PrintWriter out = response.getWriter();
-            if (valToHandle instanceof ModelView) {
-                ModelView mv = (ModelView) valToHandle;
-                if (!mv.getData().isEmpty()) {
-                    HashMap<String, Object> datas = mv.getData();
-                    Iterator<String> keys = datas.keySet().iterator();
-                    while (keys.hasNext()) {
-                        out.print(gson.toJson(datas.get(keys.next())));
-                    }
-                }
-            } else {
-                out.print(gson.toJson(valToHandle));
-            }
-        } catch (Exception e) {
-            throw e;
-        }
-    }
-
     void resolveUrl(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
         PrintWriter out = response.getWriter();
-        response.setContentType("text/html;charset=UTF-8");
-
         if (valToHandle instanceof String) {
             out.println((String) valToHandle);
         } else if (valToHandle instanceof ModelView) {
@@ -221,6 +185,7 @@ public class FrontControlleur extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
 
         if (this.checkBuildError()) {
