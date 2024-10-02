@@ -31,7 +31,6 @@ popd
 
 rem copie de jar vers lib de test Path
 xcopy "%binPath%\%jarName%.jar" %testPath%\lib /Y
-xcopy "%libPath%" %testPath%\lib /Y
 
 rem copie de error manager vers test Path 
 xcopy "%errorHandler%" %testPath%\lib /Y
