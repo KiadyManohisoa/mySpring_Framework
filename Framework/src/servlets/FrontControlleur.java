@@ -11,6 +11,7 @@ import java.util.*;
 import annotation.*;
 import util.*;
 import mapping.*;
+import com.google.gson.Gson;
 
 public class FrontControlleur extends HttpServlet {
 
@@ -82,13 +83,22 @@ public class FrontControlleur extends HttpServlet {
         };
     }
 
-    void checkGetRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    void checkRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Object valueToHandle = map.invokeMethode(request);
-        new FrontControlleur().resolveUrl(valueToHandle, request, response);
+        // case restApi annotation in class :
+        // if(map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
+
+        // case restApi annotation in method
+        if (map.getMethod().isAnnotationPresent(RestApi.class)
+                || map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
+            resolveRestRequest(valueToHandle, request, response);
+        } else {
+            new FrontControlleur().resolveUrl(valueToHandle, request, response);
+        }
     }
 
     @SuppressWarnings("deprecation")
-    boolean isTherePostRequest(HttpServletRequest request, HttpServletResponse response,
+    boolean hasPassedParameters(HttpServletRequest request, HttpServletResponse response,
             MyMapping mapping)
             throws Exception {
         try {
@@ -130,6 +140,29 @@ public class FrontControlleur extends HttpServlet {
         return result;
     }
 
+    void resolveRestRequest(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        response.setContentType("application/json");
+        Gson gson = new Gson();
+        try {
+            PrintWriter out = response.getWriter();
+            if (valToHandle instanceof ModelView) {
+                ModelView mv = (ModelView) valToHandle;
+                if (!mv.getData().isEmpty()) {
+                    HashMap<String, Object> datas = mv.getData();
+                    Iterator<String> keys = datas.keySet().iterator();
+                    while (keys.hasNext()) {
+                        out.print(gson.toJson(datas.get(keys.next())));
+                    }
+                }
+            } else {
+                out.print(gson.toJson(valToHandle));
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
     void resolveUrl(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
         PrintWriter out = response.getWriter();
@@ -165,7 +198,7 @@ public class FrontControlleur extends HttpServlet {
             List<Class<?>> classes = util.getClassesByAnnotation(basePackage, Controlleur.class);
             // init hashMaps with Controlleur and Get annotation
             for (int i = 0; i < classes.size(); i++) {
-                util.addMethodByAnnotation(classes.get(i), Get.class, this.mappings);
+                util.addMethodByAnnotation(classes.get(i), Url.class, this.mappings);
             }
         } catch (Exception e) {
             throw e;
@@ -183,7 +216,13 @@ public class FrontControlleur extends HttpServlet {
         }
     }
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+    void checkVerbException(MyMapping map, String verb) throws Exception {
+        if (!map.getVerb().equalsIgnoreCase(verb)) {
+            throw new Exception("Bad request, please verify your HTTP correspondance");
+        }
+    }
+
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response, String clientVerb)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
@@ -196,17 +235,19 @@ public class FrontControlleur extends HttpServlet {
         if (mappings.containsKey(servletPath)) {
             MyMapping map = mappings.get(servletPath);
             try {
-                // post request case
-                if (this.isTherePostRequest(request, response, map)) {
+                checkVerbException(map, clientVerb);
+
+                // sending data to controller's method (url/request body)
+                if (this.hasPassedParameters(request, response, map)) {
                     return;
                 }
-                // get request case
-                this.checkGetRequest(map, request, response);
+                // no data
+                this.checkRequest(map, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
-                e.printStackTrace();
+                // e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
@@ -216,11 +257,11 @@ public class FrontControlleur extends HttpServlet {
     }
 
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        processRequest(req, res);
+        processRequest(req, res, "get");
     }
 
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        processRequest(req, res);
+        processRequest(req, res, "post");
     }
 
 }
