@@ -1,6 +1,8 @@
 package mapping;
 
 import java.lang.reflect.*;
+
+import annotation.Post;
 import jakarta.servlet.http.*;
 import servlets.FrontControlleur;
 import util.Convertor;
@@ -10,6 +12,7 @@ public class MyMapping {
 
     String className;
     Method method;
+    String verb; // méthode http : get,post, delete etc...
 
     Object[] initializeParameters(Method method, HttpServletRequest request) throws Exception {
         Object[] answers = new Object[2];
@@ -69,6 +72,7 @@ public class MyMapping {
     public MyMapping(String className, Method method) {
         this.setClassName(className);
         this.setMethod(method);
+        this.setVerb();
     }
 
     public String getClassName() {
@@ -85,6 +89,21 @@ public class MyMapping {
 
     public void setMethod(Method method) {
         this.method = method;
+    }
+
+    public String getVerb() {
+        return verb;
+    }
+
+    void setVerb() {
+        this.setVerb("get"); // default http method
+        if (this.getMethod().isAnnotationPresent(Post.class)) {
+            this.setVerb("post");
+        }
+    }
+
+    public void setVerb(String verb) {
+        this.verb = verb;
     }
 
 }
