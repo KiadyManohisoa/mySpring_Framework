@@ -7,12 +7,22 @@ import jakarta.servlet.http.*;
 import servlets.FrontControlleur;
 import util.Convertor;
 import util.Syntaxe;
+import java.util.Set;
+import java.util.HashSet;
 
 public class MyMapping {
 
     String className;
-    Method method;
-    String verb; // méthode http : get,post, delete etc...
+    Set<VerbMethod> verbMethods;
+
+    public VerbMethod getVerbMethod(String verbRequest) throws Exception {
+        for (VerbMethod vbm : this.getVerbMethods()) {
+            if (vbm.getVerb().equals(verbRequest)) {
+                return vbm;
+            }
+        }
+        throw new Exception("Bad request, please verify your HTTP correspondance");
+    }
 
     Object[] initializeParameters(Method method, HttpServletRequest request) throws Exception {
         Object[] answers = new Object[2];
@@ -46,11 +56,10 @@ public class MyMapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object invokeMethode(HttpServletRequest request) throws Exception {
+    public Object invokeMethode(HttpServletRequest request, Method mConcerned) throws Exception {
         Object objectReturned = new Object();
         try {
             Class<?> clazz = Class.forName(this.getClassName());
-            Method mConcerned = this.getMethod();
             Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
             Object[] invokeParams = initializeParameters(mConcerned, request);
@@ -69,10 +78,30 @@ public class MyMapping {
         return objectReturned;
     }
 
-    public MyMapping(String className, Method method) {
+    public void print() {
+        System.out.println("For this mapping with the className " + this.getClassName() + ", it's verbmethods");
+        for (VerbMethod vbm : this.getVerbMethods()) {
+            System.out.println("\t" + vbm.getVerb() + " | " + vbm.getMethod().getDeclaringClass().getName()
+                    + "/" + vbm.getMethod().getName());
+        }
+    }
+
+    public MyMapping(String className, VerbMethod verbMethod) {
         this.setClassName(className);
-        this.setMethod(method);
-        this.setVerb();
+        this.verbMethods = new HashSet<>();
+        this.getVerbMethods().add(verbMethod);
+    }
+
+    public Set<VerbMethod> getVerbMethods() {
+        return verbMethods;
+    }
+
+    public void setVerbMethods(Set<VerbMethod> verbMethods) {
+        this.verbMethods = verbMethods;
+    }
+
+    public MyMapping(String className) {
+        this.setClassName(className);
     }
 
     public String getClassName() {
@@ -81,29 +110,6 @@ public class MyMapping {
 
     public void setClassName(String className) {
         this.className = className;
-    }
-
-    public Method getMethod() {
-        return method;
-    }
-
-    public void setMethod(Method method) {
-        this.method = method;
-    }
-
-    public String getVerb() {
-        return verb;
-    }
-
-    void setVerb() {
-        this.setVerb("get"); // default http method
-        if (this.getMethod().isAnnotationPresent(Post.class)) {
-            this.setVerb("post");
-        }
-    }
-
-    public void setVerb(String verb) {
-        this.verb = verb;
     }
 
 }

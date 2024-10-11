@@ -18,21 +18,9 @@ import com.google.gson.Gson;
 public class FrontControlleur extends HttpServlet {
 
     private String basePackage;
-    HashMap<String, MyMapping> mappings = new HashMap<String, MyMapping>();
+    HashMap<String, MyMapping> mappings;
 
-    // public void printHttpSession(HttpServletRequest request) {
-    // HttpSession session = request.getSession();
-    // System.out.println("Here are the session " + session.getId() + "key_values");
-    // Enumeration<String> sessionKeys = session.getAttributeNames();
-    // while (sessionKeys.hasMoreElements()) {
-    // String key = sessionKeys.nextElement();
-    // System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
-    // }
-    // System.out.println();
-    // }
-
-    public Runnable checkSessionParam(MyMapping map, HttpServletRequest request) throws Exception {
-        Method mConcerned = map.getMethod();
+    public Runnable checkSessionParam(Method mConcerned, HttpServletRequest request) throws Exception {
         Parameter[] mParameters = mConcerned.getParameters();
         MySession mySession = null;
         for (int i = 0; i < mParameters.length; i++) {
@@ -85,14 +73,15 @@ public class FrontControlleur extends HttpServlet {
         };
     }
 
-    void checkRequest(MyMapping map, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Object valueToHandle = map.invokeMethode(request);
+    void checkRequest(MyMapping map, Method mMatched, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        Object valueToHandle = map.invokeMethode(request, mMatched);
         // case restApi annotation in class :
         // if(map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
 
         // case restApi annotation in method
-        if (map.getMethod().isAnnotationPresent(RestApi.class)
-                || map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
+        if (mMatched.isAnnotationPresent(RestApi.class)
+                || mMatched.getDeclaringClass().isAnnotationPresent(RestApi.class)) {
             resolveRestRequest(valueToHandle, request, response);
         } else {
             new FrontControlleur().resolveUrl(valueToHandle, request, response);
@@ -101,14 +90,13 @@ public class FrontControlleur extends HttpServlet {
 
     @SuppressWarnings("deprecation")
     boolean hasPassedParameters(HttpServletRequest request, HttpServletResponse response,
-            MyMapping mapping)
+            MyMapping mapping, Method mConcerned)
             throws Exception {
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
             if (!parameterMap.isEmpty()) {
                 Class<?> clazz = Class.forName(mapping.getClassName());
-                Method mConcerned = mapping.getMethod();
                 Parameter[] methodParameters = mConcerned.getParameters();
                 Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
@@ -197,10 +185,11 @@ public class FrontControlleur extends HttpServlet {
     void initVariables() throws Exception {
         String base = this.getInitParameter("base-package");
         Util util = new Util();
+        this.mappings = new HashMap<String, MyMapping>();
         try {
             basePackage = base;
             List<Class<?>> classes = util.getClassesByAnnotation(basePackage, Controlleur.class);
-            // init hashMaps with Controlleur and Get annotation
+            // init hashMaps with Controlleur and Url annotation
             for (int i = 0; i < classes.size(); i++) {
                 util.addMethodByAnnotation(classes.get(i), Url.class, this.mappings);
             }
@@ -212,6 +201,7 @@ public class FrontControlleur extends HttpServlet {
     public void init() {
         try {
             initVariables();
+            this.displayMyMappingHashMap();
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 this.getServletContext().setAttribute("buildError", e.getMessage());
@@ -220,15 +210,14 @@ public class FrontControlleur extends HttpServlet {
         }
     }
 
-    void checkVerbException(MyMapping map, String verb) throws Exception {
-        if (!map.getVerb().equalsIgnoreCase(verb)) {
-            throw new Exception("Bad request, please verify your HTTP correspondance");
-        }
+    Method checkVerbException(MyMapping map, String verb) throws Exception {
+        return map.getVerbMethod(verb).getMethod();
     }
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response, String clientVerb)
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         PrintWriter out = response.getWriter();
+        String clientVerb = request.getMethod();
 
         if (this.checkBuildError()) {
             return;
@@ -238,19 +227,19 @@ public class FrontControlleur extends HttpServlet {
         if (mappings.containsKey(servletPath)) {
             MyMapping map = mappings.get(servletPath);
             try {
-                checkVerbException(map, clientVerb);
+                Method mMatched = this.checkVerbException(map, clientVerb);
 
                 // sending data to controller's method (url/request body)
-                if (this.hasPassedParameters(request, response, map)) {
+                if (this.hasPassedParameters(request, response, map, mMatched)) {
                     return;
                 }
                 // no data
-                this.checkRequest(map, request, response);
+                this.checkRequest(map, mMatched, request, response);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
-                // e.printStackTrace();
+                e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
@@ -260,11 +249,35 @@ public class FrontControlleur extends HttpServlet {
     }
 
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        processRequest(req, res, "get");
+        processRequest(req, res);
     }
 
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        processRequest(req, res, "post");
+        processRequest(req, res);
     }
+
+    void displayMyMappingHashMap() {
+        for (HashMap.Entry<String, MyMapping> entry : this.mappings.entrySet()) {
+            System.out.println("Pour la clé " + entry.getKey() + " associé au Mapping de nom de classe "
+                    + entry.getValue().getClassName() + " ont les verbmethods ");
+            Set<VerbMethod> vbm = entry.getValue().getVerbMethods();
+            for (VerbMethod vb : vbm) {
+                System.out.println("\t" + vb.getVerb() + " | " + vb.getMethod().getDeclaringClass().getName()
+                        + "/" + vb.getMethod().getName());
+            }
+        }
+    }
+
+    // print methods
+    // void printHttpSession(HttpServletRequest request) {
+    // HttpSession session = request.getSession();
+    // System.out.println("Here are the session " + session.getId() + "key_values");
+    // Enumeration<String> sessionKeys = session.getAttributeNames();
+    // while (sessionKeys.hasMoreElements()) {
+    // String key = sessionKeys.nextElement();
+    // System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
+    // }
+    // System.out.println();
+    // }
 
 }

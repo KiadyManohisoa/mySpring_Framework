@@ -5,7 +5,7 @@ import java.util.*;
 import java.net.*;
 import java.lang.reflect.*;
 import java.lang.annotation.Annotation;
-import mapping.MyMapping;
+import mapping.*;
 import annotation.*;
 
 public class Util {
@@ -29,7 +29,7 @@ public class Util {
     }
 
     public <T extends Annotation> void addMethodByAnnotation(Class<?> reference, Class<T> annotation,
-            HashMap<String, MyMapping> mapping)
+            HashMap<String, MyMapping> hashMap)
             throws Exception {
         Method[] methods = reference.getDeclaredMethods();
         for (int i = 0; i < methods.length; i++) {
@@ -38,12 +38,16 @@ public class Util {
                 Method valueMethod = annotation.getMethod("value");
                 String value = (String) valueMethod.invoke(annotInstance);
                 value = this.checkUrlValue(value);
-                if (mapping.containsKey(value)) {
-                    throw new RuntimeException(
-                            "L'url '" + value
-                                    + "' est associée plus d'une fois à deux ou plusieurs méthodes, ce qui n'est pas permis");
+                if (hashMap.containsKey(value)) {
+                    MyMapping myMapping = hashMap.get(value);
+                    myMapping.getVerbMethods().add(new VerbMethod(methods[i]));
+                    myMapping.print();
+                    // throw new RuntimeException(
+                    // "L'url '" + value
+                    // + "' est associée plus d'une fois à deux ou plusieurs méthodes, ce qui n'est
+                    // pas permis");
                 }
-                mapping.put(value, new MyMapping(reference.getName(), methods[i]));
+                hashMap.put(value, new MyMapping(reference.getName(), new VerbMethod(methods[i])));
             }
         }
     }
