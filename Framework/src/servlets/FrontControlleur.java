@@ -198,6 +198,7 @@ public class FrontControlleur extends HttpServlet {
         }
     }
 
+    @Override
     public void init() {
         try {
             initVariables();
@@ -258,8 +259,9 @@ public class FrontControlleur extends HttpServlet {
 
     void displayMyMappingHashMap() {
         for (HashMap.Entry<String, MyMapping> entry : this.mappings.entrySet()) {
-            System.out.println("Pour la clé " + entry.getKey() + " associé au Mapping de nom de classe "
-                    + entry.getValue().getClassName() + " ont les verbmethods ");
+            System.out.println("\nPour la clé " + entry.getKey() + " associé au Mapping de nom de classe "
+                    + entry.getValue().getClassName() + " ont les verbmethods length "
+                    + entry.getValue().getVerbMethods().size());
             Set<VerbMethod> vbm = entry.getValue().getVerbMethods();
             for (VerbMethod vb : vbm) {
                 System.out.println("\t" + vb.getVerb() + " | " + vb.getMethod().getDeclaringClass().getName()

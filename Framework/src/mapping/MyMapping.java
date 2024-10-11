@@ -79,7 +79,8 @@ public class MyMapping {
     }
 
     public void print() {
-        System.out.println("For this mapping with the className " + this.getClassName() + ", it's verbmethods");
+        System.out.println("For this mapping with the className " + this.getClassName() + " size:"
+                + this.getVerbMethods().size() + " it's verbmethods");
         for (VerbMethod vbm : this.getVerbMethods()) {
             System.out.println("\t" + vbm.getVerb() + " | " + vbm.getMethod().getDeclaringClass().getName()
                     + "/" + vbm.getMethod().getName());

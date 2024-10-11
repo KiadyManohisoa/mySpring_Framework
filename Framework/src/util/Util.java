@@ -40,14 +40,23 @@ public class Util {
                 value = this.checkUrlValue(value);
                 if (hashMap.containsKey(value)) {
                     MyMapping myMapping = hashMap.get(value);
-                    myMapping.getVerbMethods().add(new VerbMethod(methods[i]));
-                    myMapping.print();
+
+                    if (reference.getName().equals(myMapping.getClassName())) {
+                        System.out.println("adding value : "
+                                + hashMap.get(value).getVerbMethods().add(new VerbMethod(methods[i])));
+
+                        myMapping.print();
+                    } else {
+                        throw new RuntimeException(
+                                "Deux méthodes d'une même url ne peuvent être définies que dans une même classe");
+                    }
                     // throw new RuntimeException(
                     // "L'url '" + value
                     // + "' est associée plus d'une fois à deux ou plusieurs méthodes, ce qui n'est
                     // pas permis");
+                } else {
+                    hashMap.put(value, new MyMapping(reference.getName(), new VerbMethod(methods[i])));
                 }
-                hashMap.put(value, new MyMapping(reference.getName(), new VerbMethod(methods[i])));
             }
         }
     }
