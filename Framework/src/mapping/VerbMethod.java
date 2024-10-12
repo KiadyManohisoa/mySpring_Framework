@@ -12,24 +12,23 @@ public class VerbMethod {
     @Override
     public boolean equals(Object o) {
         VerbMethod toAdd = (VerbMethod) o;
-        boolean answer = false; // initialement non equals
-        if (this.getVerb() == toAdd.getVerb()) {
-            answer = true;
+        if (this.getVerb().compareTo(toAdd.getVerb()) == 0) {
+            return true;
         }
-        if (this.getMethod() == toAdd.getMethod()) {
-            answer = true;
+        if (this.getMethod().getName().equals(toAdd.getMethod().getName())) {
+            return true;
         }
-        return answer;
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash("NONE");
     }
 
     public VerbMethod(Method method) {
         this.setMethod(method);
         this.setVerb();
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(this.getVerb(), this.getMethod());
     }
 
     public String getVerb() {

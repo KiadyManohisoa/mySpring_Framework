@@ -24,6 +24,13 @@ public class MyMapping {
         throw new Exception("Bad request, please verify your HTTP correspondance");
     }
 
+    public void addVerbMethod(VerbMethod vbm) throws RuntimeException {
+        if (!this.getVerbMethods().add(vbm)) {
+            throw new RuntimeException(
+                    "Deux méthodes ne peuvent pas avoir le même verb http ou la même méthode");
+        }
+    }
+
     Object[] initializeParameters(Method method, HttpServletRequest request) throws Exception {
         Object[] answers = new Object[2];
 
@@ -90,7 +97,7 @@ public class MyMapping {
     public MyMapping(String className, VerbMethod verbMethod) {
         this.setClassName(className);
         this.verbMethods = new HashSet<>();
-        this.getVerbMethods().add(verbMethod);
+        this.addVerbMethod(verbMethod);
     }
 
     public Set<VerbMethod> getVerbMethods() {
