@@ -120,15 +120,24 @@ public class FrontControlleur extends HttpServlet {
         return false;
     }
 
-    boolean checkBuildError() {
-        boolean result = false;
+    void checkBuildError() throws Exception {
         String buildErr = (String) this.getServletContext().getAttribute("buildError");
         if (buildErr != null) {
-            System.out.println("\n*** ERROR : " + buildErr + "\n");
-            result = true;
+            throw new Exception(buildErr);
+            // System.out.println("\n*** ERROR : " + buildErr + "\n");
         }
-        return result;
     }
+
+    // boolean checkBuildError() {
+    // boolean result = false;
+    // String buildErr = (String)
+    // this.getServletContext().getAttribute("buildError");
+    // if (buildErr != null) {
+    // System.out.println("\n*** ERROR : " + buildErr + "\n");
+    // result = true;
+    // }
+    // return result;
+    // }
 
     void resolveRestRequest(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -202,7 +211,7 @@ public class FrontControlleur extends HttpServlet {
     public void init() {
         try {
             initVariables();
-            this.displayMyMappingHashMap();
+            // this.displayMyMappingHashMap();
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 this.getServletContext().setAttribute("buildError", e.getMessage());
@@ -219,8 +228,10 @@ public class FrontControlleur extends HttpServlet {
             throws ServletException, IOException {
         PrintWriter out = response.getWriter();
         String clientVerb = request.getMethod();
-
-        if (this.checkBuildError()) {
+        try {
+            this.checkBuildError();
+        } catch (Exception e) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
             return;
         }
 
@@ -240,12 +251,12 @@ public class FrontControlleur extends HttpServlet {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
-                e.printStackTrace();
+                // e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
         } else {
-            out.println("*** ERROR : 404 NOT FOUND");
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Url introuvable");
         }
     }
 
@@ -257,18 +268,34 @@ public class FrontControlleur extends HttpServlet {
         processRequest(req, res);
     }
 
-    void displayMyMappingHashMap() {
-        for (HashMap.Entry<String, MyMapping> entry : this.mappings.entrySet()) {
-            System.out.println("\nPour la clé " + entry.getKey() + " associé au Mapping de nom de classe "
-                    + entry.getValue().getClassName() + " ont les verbmethods length "
-                    + entry.getValue().getVerbMethods().size());
-            Set<VerbMethod> vbm = entry.getValue().getVerbMethods();
-            for (VerbMethod vb : vbm) {
-                System.out.println("\t" + vb.getVerb() + " | " + vb.getMethod().getDeclaringClass().getName()
-                        + "/" + vb.getMethod().getName());
-            }
-        }
-    }
+    // void showError(HttpServletResponse response, String message, int errorValue)
+    // throws Exception {
+    // response.setStatus(errorValue);
+    // response.setContentType("text/html");
+    // PrintWriter out = response.getWriter();
+    // out.println("<html>");
+    // out.println("<head> <title> Une erreur s'est produite </title> </head>");
+    // out.println("<body>");
+    // out.println("<h1> Erreur " + errorValue + " </h1>");
+    // out.println("<p>" + message + "</p>");
+    // out.println("</body> </html>");
+
+    // }
+
+    // void displayMyMappingHashMap() {
+    // for (HashMap.Entry<String, MyMapping> entry : this.mappings.entrySet()) {
+    // System.out.println("\nPour la clé " + entry.getKey() + " associé au Mapping
+    // de nom de classe "
+    // + entry.getValue().getClassName() + " ont les verbmethods length "
+    // + entry.getValue().getVerbMethods().size());
+    // Set<VerbMethod> vbm = entry.getValue().getVerbMethods();
+    // for (VerbMethod vb : vbm) {
+    // System.out.println("\t" + vb.getVerb() + " | " +
+    // vb.getMethod().getDeclaringClass().getName()
+    // + "/" + vb.getMethod().getName());
+    // }
+    // }
+    // }
 
     // print methods
     // void printHttpSession(HttpServletRequest request) {

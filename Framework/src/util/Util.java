@@ -42,10 +42,7 @@ public class Util {
                     MyMapping myMapping = hashMap.get(value);
 
                     if (reference.getName().equals(myMapping.getClassName())) {
-                        System.out.println("adding value : "
-                                + hashMap.get(value).getVerbMethods().add(new VerbMethod(methods[i])));
-
-                        myMapping.print();
+                        myMapping.addVerbMethod(new VerbMethod(methods[i]));
                     } else {
                         throw new RuntimeException(
                                 "Deux méthodes d'une même url ne peuvent être définies que dans une même classe");
