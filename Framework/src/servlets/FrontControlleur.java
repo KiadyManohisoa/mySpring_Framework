@@ -7,6 +7,8 @@ import java.lang.reflect.*;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import jakarta.servlet.annotation.MultipartConfig;
+
 import java.util.*;
 import annotation.*;
 import util.*;
@@ -15,6 +17,7 @@ import com.google.gson.Gson;
 
 import com.google.gson.Gson;
 
+@MultipartConfig
 public class FrontControlleur extends HttpServlet {
 
     private String basePackage;
@@ -95,13 +98,20 @@ public class FrontControlleur extends HttpServlet {
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
-            if (!parameterMap.isEmpty()) {
+            if (!parameterMap.isEmpty() || (request.getContentType() != null
+                    && request.getContentType().toLowerCase().startsWith("multipart/"))) {
+                System.out.println("zakany");
+                Reflect reflect = new Reflect();
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Parameter[] methodParameters = mConcerned.getParameters();
                 Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
-                Object[] invokeParams = new Reflect().prepareInvokeParams(parameterMap,
+                Object[] invokeParams = reflect.prepareInvokeParams(parameterMap,
                         methodParameters, invokingObject, request);
+
+                // ensure all parameters are assigned a value
+                reflect.checkLeftParams(methodParameters, (Object[]) invokeParams[1], request,
+                        (Runnable) invokeParams[0]);
 
                 // case MySession as a field
                 Runnable sessionCallbackAsField = this.checkSessionField(invokingObject, request);
@@ -113,6 +123,8 @@ public class FrontControlleur extends HttpServlet {
 
                 this.resolveUrl(object, request, response);
                 return true;
+            } else {
+                System.out.println("tsy zakany");
             }
         } catch (Exception e) {
             throw e;
