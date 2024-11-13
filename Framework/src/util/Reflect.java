@@ -100,7 +100,7 @@ public class Reflect {
         }
 
         // // Ensure all parameters are assigned a value
-        // this.checkLeftParams(mParameters, invokeParams, request, callback);
+        this.checkLeftParams(mParameters, invokeParams, request, callback);
 
         answers[0] = callback;
         answers[1] = invokeParams;
