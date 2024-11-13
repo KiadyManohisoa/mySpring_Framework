@@ -4,6 +4,9 @@ import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.swing.plaf.multi.MultiDesktopIconUI;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import annotation.FieldParameter;
@@ -11,6 +14,42 @@ import annotation.RequestParameter;
 import mapping.MySession;
 
 public class Reflect {
+
+    public void checkLeftParams(Parameter[] mParameters, Object[] invokeParams, HttpServletRequest request,
+            Runnable callback) throws Exception {
+        Convertor convertor = new Convertor();
+        for (int i = 0; i < mParameters.length; i++) {
+            if (invokeParams[i] == null) {
+                if (mParameters[i].getType().equals(MySession.class)) {
+                    Class<?> clazz = Class.forName(mParameters[i].getType().getName());
+                    MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
+                    mySession.setKeyValues(request.getSession());
+                    callback = () -> {
+                        mySession.updateHttpSession(request.getSession());
+                    };
+                    // mySession.setSession(request.getSession());
+                    invokeParams[i] = mySession;
+                } else if (mParameters[i].getType().equals(MultiPartHandler.class)) {
+                    // System.out.println("submitted fileName " +
+                    // request.getPart(inputName).getSubmittedFileName()
+                    // + "for the inputName " + inputName);
+                    MultiPartHandler handler = new MultiPartHandler();
+                    handler.setAppPath(request.getServletContext().getRealPath(""));
+                    String inputName = mParameters[i].getAnnotation(RequestParameter.class).value();
+                    System.out.println("the inputname" + inputName);
+                    handler.setSelf(request.getPart(inputName));
+                    invokeParams[i] = handler;
+                } else {
+                    if (mParameters[i].getType().isPrimitive()) {
+                        invokeParams[i] = convertor.getDefaultValue(mParameters[i].getType());
+                    } else {
+                        Class<?> clazz = Class.forName(mParameters[i].getType().getName());
+                        invokeParams[i] = clazz.getDeclaredConstructor().newInstance();
+                    }
+                }
+            }
+        }
+    }
 
     public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
             Object invokingObj,
@@ -61,27 +100,8 @@ public class Reflect {
         }
 
         // // Ensure all parameters are assigned a value
-        for (int i = 0; i < mParameters.length; i++) {
-            if (invokeParams[i] == null) {
-                if (mParameters[i].getType().equals(MySession.class)) {
-                    Class<?> clazz = Class.forName(mParameters[i].getType().getName());
-                    MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
-                    mySession.setKeyValues(request.getSession());
-                    callback = () -> {
-                        mySession.updateHttpSession(request.getSession());
-                    };
-                    // mySession.setSession(request.getSession());
-                    invokeParams[i] = mySession;
-                } else {
-                    if (mParameters[i].getType().isPrimitive()) {
-                        invokeParams[i] = convertor.getDefaultValue(mParameters[i].getType());
-                    } else {
-                        Class<?> clazz = Class.forName(mParameters[i].getType().getName());
-                        invokeParams[i] = clazz.getDeclaredConstructor().newInstance();
-                    }
-                }
-            }
-        }
+        this.checkLeftParams(mParameters, invokeParams, request, callback);
+
         answers[0] = callback;
         answers[1] = invokeParams;
 
@@ -109,10 +129,11 @@ public class Reflect {
             throws Exception {
         RequestParameter annotation = parameter.getAnnotation(RequestParameter.class);
 
-        if (annotation != null && inputName.equals(annotation.value())) {
+        if ((annotation != null && inputName.equals(annotation.value())) || (inputName.equals(parameter.getName()))) {
             return convertor.convertInputToParam(inputValue, parameter.getType());
-        } else if (inputName.equals(parameter.getName())) {
-            return convertor.convertInputToParam(inputValue, parameter.getType());
+            // } else if (inputName.equals(parameter.getName())) {
+            // return convertor.convertInputToParam(inputValue, parameter.getType());
+            // }
         } else {
             return convertor.getDefaultValue(parameter.getType());
         }
