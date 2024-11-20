@@ -15,6 +15,21 @@ import mapping.MySession;
 
 public class Reflect {
 
+    public void controlValue(ArrayList<String> inputNameAssociedToObject, Parameter[] parameters, Object[] invokeParams)
+            throws Exception {
+        Control control = new Control();
+        if (inputNameAssociedToObject.size() > 0) {
+            System.out.println("inputNameATO" + inputNameAssociedToObject.size());
+            for (String inputName : inputNameAssociedToObject) {
+                int idParameter = this.findIdParameter(parameters, inputName);
+                if (idParameter != -1) {
+                    Object binded = (Object) invokeParams[idParameter];
+                    control.checkOnFields(binded);
+                }
+            }
+        }
+    }
+
     public void checkLeftParams(Parameter[] mParameters, Object[] invokeParams, HttpServletRequest request,
             Runnable callback) throws Exception {
         Convertor convertor = new Convertor();
@@ -27,16 +42,11 @@ public class Reflect {
                     callback = () -> {
                         mySession.updateHttpSession(request.getSession());
                     };
-                    // mySession.setSession(request.getSession());
                     invokeParams[i] = mySession;
                 } else if (mParameters[i].getType().equals(MultiPartHandler.class)) {
-                    // System.out.println("submitted fileName " +
-                    // request.getPart(inputName).getSubmittedFileName()
-                    // + "for the inputName " + inputName);
                     MultiPartHandler handler = new MultiPartHandler();
                     handler.setAppPath(request.getServletContext().getRealPath(""));
                     String inputName = mParameters[i].getAnnotation(RequestParameter.class).value();
-                    System.out.println("the inputname" + inputName);
                     handler.setSelf(request.getPart(inputName));
                     invokeParams[i] = handler;
                 } else {
@@ -49,6 +59,20 @@ public class Reflect {
                 }
             }
         }
+    }
+
+    int findIdParameter(Parameter[] functionParams, String inputName) {
+        int idParameter = -1;
+        for (int i = 0; i < functionParams.length; i++) {
+            RequestParameter annotation = functionParams[i].getAnnotation(RequestParameter.class);
+            if (annotation != null && inputName.equals(annotation.value())) {
+                return i;
+            }
+            // else if (inputName.equals(functionParams[i].getName())) {
+            // return i;
+            // }
+        }
+        return idParameter;
     }
 
     public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
@@ -65,39 +89,50 @@ public class Reflect {
 
         this.checkParameters(mParameters, new Class<?>[] { MySession.class });
 
-        int j = 0;
+        ArrayList<String> inputNameAssociatedToObject = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
             String inputName = entry.getKey();
             String[] inputValue = entry.getValue();
+            System.out.println("inputName " + inputName + " value " + inputValue[0]);
             // wanna set value to an object
             if (inputName.contains(".")) {
                 String[] objSpecs = inputName.split("\\.");
-                if (this.canBeInstanced(objSpecs[0], mParameters)) {
-                    if (paramsAssignationMap.containsKey(objSpecs[0])) {
-                        int idToAssign = paramsAssignationMap.get(objSpecs[0]);
-                        Object toAssign = invokeParams[idToAssign];
-                        reflect.assignValueToObject(toAssign, objSpecs[1],
-                                inputValue[0]);
-                    } else {
-                        Object toAssign = reflect.instanceObjectFromParm(objSpecs[0], mParameters);
-                        reflect.assignValueToObject(toAssign, objSpecs[1],
-                                inputValue[0]);
-                        invokeParams[j] = toAssign;
-                        paramsAssignationMap.put(objSpecs[0], j);
-                        j++;
+                int idParameter = this.findIdParameter(mParameters, objSpecs[0]);
+                if (idParameter != -1) {
+                    if (this.canBeInstanced(objSpecs[0], mParameters)) {
+                        if (paramsAssignationMap.containsKey(objSpecs[0])) {
+                            int idToAssign = paramsAssignationMap.get(objSpecs[0]);
+                            Object toAssign = invokeParams[idToAssign];
+                            reflect.assignValueToObject(toAssign, objSpecs[1],
+                                    inputValue[0]);
+                        } else {
+                            inputNameAssociatedToObject.add(objSpecs[0]);
+                            Object toAssign = reflect.instanceObjectFromParm(objSpecs[0], mParameters);
+                            reflect.assignValueToObject(toAssign, objSpecs[1],
+                                    inputValue[0]);
+                            invokeParams[idParameter] = toAssign;
+                            paramsAssignationMap.put(objSpecs[0], idParameter);
+                        }
                     }
                 }
             }
             // wanna set value to a standard variable
             else {
-                if (!paramsAssignationMap.containsKey(inputName)) {
-                    invokeParams[j] = this.getParameterValue(inputName, inputValue[0], mParameters[j],
-                            convertor);
-                    paramsAssignationMap.put(inputName, j);
-                    j++;
+                int idParameter = this.findIdParameter(mParameters, inputName);
+                if (idParameter != -1) {
+                    if (!paramsAssignationMap.containsKey(inputName)) {
+                        invokeParams[idParameter] = this.getParameterValue(inputName, inputValue[0],
+                                mParameters[idParameter],
+                                convertor);
+                        paramsAssignationMap.put(inputName, idParameter);
+                    }
                 }
             }
+
         }
+
+        // Control the value of objets binded with an input
+        this.controlValue(inputNameAssociatedToObject, mParameters, invokeParams);
 
         // // Ensure all parameters are assigned a value
         this.checkLeftParams(mParameters, invokeParams, request, callback);
@@ -106,6 +141,7 @@ public class Reflect {
         answers[1] = invokeParams;
 
         return answers;
+
     }
 
     void checkParameters(Parameter[] parameters, Class<?>[] notToCheck) throws Exception {
@@ -142,16 +178,24 @@ public class Reflect {
     public void assignValueToObject(Object reference, String attrSearch, String inputValue)
             throws Exception {
         try {
+            Control control = new Control();
             Field[] fields = reference.getClass().getDeclaredFields();
             for (int i = 0; i < fields.length; i++) {
+                // System.out.println("the attribute we are searching on " + attrSearch + " the
+                // actuel attributeName "
+                // + fields[i].getName());
+
                 if (fields[i].getName().equals(attrSearch) || (fields[i].isAnnotationPresent(FieldParameter.class)
                         && fields[i].getAnnotation(FieldParameter.class).value().equals(attrSearch))) {
+                    // System.out.println("tafiditra ato " + attrSearch);
+                    control.checkOnField(fields[i], inputValue);
                     Method mSetter = reference.getClass().getDeclaredMethod(
-                            "set" + Syntaxe.getSetterNorm(fields[i].getName()),
+                            "set" + Syntaxe.getSetterGetterNorm(fields[i].getName()),
                             new Class[] { fields[i].getType() });
 
                     // System.out.println("field" + i + " " + mSetter.getName());
                     mSetter.invoke(reference, new Convertor().convertInputToParam(inputValue, fields[i].getType()));
+                    return;
                 }
             }
         } catch (Exception e) {

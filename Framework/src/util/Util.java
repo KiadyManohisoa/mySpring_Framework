@@ -13,6 +13,13 @@ public class Util {
     public Util() {
     }
 
+    public boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        return str.matches("-?\\d+(\\.\\d+)?");
+    }
+
     public static boolean isClassNotPresent(Class<?>[] classes, Class<?> targetClass) {
         Set<Class<?>> classSet = new HashSet<>();
         for (Class<?> clazz : classes) {
