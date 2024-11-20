@@ -1,6 +1,7 @@
 package util;
 
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,9 +18,9 @@ public class MultiPartHandler {
 
     public void setSelf(Part part) throws Exception {
         try {
-            System.out.println("submittedFileName " + part.getSubmittedFileName());
             this.setFileName(part.getSubmittedFileName());
             this.setDataFeeds(part.getInputStream());
+            this.setByteContents(part);
         } catch (Exception e) {
             throw e;
         }
@@ -70,6 +71,21 @@ public class MultiPartHandler {
 
     public byte[] getByteContents() {
         return byteContents;
+    }
+
+    public void setByteContents(Part filePart) throws Exception {
+        try (InputStream inputStream = filePart.getInputStream();
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+
+            byte[] data = new byte[1024];
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+
+            this.setByteContents(buffer.toByteArray());
+        }
     }
 
     public void setByteContents(byte[] byteContents) {

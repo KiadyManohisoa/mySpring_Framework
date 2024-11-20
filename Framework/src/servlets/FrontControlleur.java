@@ -15,8 +15,6 @@ import util.*;
 import mapping.*;
 import com.google.gson.Gson;
 
-import com.google.gson.Gson;
-
 @MultipartConfig
 public class FrontControlleur extends HttpServlet {
 
@@ -53,7 +51,7 @@ public class FrontControlleur extends HttpServlet {
         for (int i = 0; i < fields.length; i++) {
             if (fields[i].getType().equals(MySession.class)) {
                 Method method = invokingObj.getClass()
-                        .getDeclaredMethod("get" + Syntaxe.getSetterNorm(fields[i].getName()));
+                        .getDeclaredMethod("get" + Syntaxe.getSetterGetterNorm(fields[i].getName()));
                 mySession = (MySession) method.invoke(invokingObj);
                 mySession.setKeyValues(request.getSession());
                 break;
@@ -100,7 +98,6 @@ public class FrontControlleur extends HttpServlet {
 
             if (!parameterMap.isEmpty() || (request.getContentType() != null
                     && request.getContentType().toLowerCase().startsWith("multipart/"))) {
-                System.out.println("zakany");
                 Reflect reflect = new Reflect();
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Parameter[] methodParameters = mConcerned.getParameters();
@@ -123,8 +120,6 @@ public class FrontControlleur extends HttpServlet {
 
                 this.resolveUrl(object, request, response);
                 return true;
-            } else {
-                System.out.println("tsy zakany");
             }
         } catch (Exception e) {
             throw e;
