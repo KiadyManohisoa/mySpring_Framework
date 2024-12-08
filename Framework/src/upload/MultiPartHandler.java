@@ -1,4 +1,4 @@
-package util;
+package upload;
 
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,8 +32,8 @@ public class MultiPartHandler {
         if (!fileSaveDirectory.exists()) {
             fileSaveDirectory.mkdirs();
         }
-        System.out.println("savePath " + savePath);
-        System.out.println("fileName " + this.getFileName());
+        // System.out.println("savePath " + savePath);
+        // System.out.println("fileName " + this.getFileName());
         Path filePath = Paths.get(savePath, this.getFileName());
         try {
             Files.copy(this.getDataFeeds(), filePath);

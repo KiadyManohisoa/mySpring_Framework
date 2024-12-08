@@ -4,6 +4,7 @@ import java.net.*;
 import java.net.http.HttpRequest;
 import java.io.*;
 import java.lang.reflect.*;
+import java.net.URL;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -11,15 +12,37 @@ import jakarta.servlet.annotation.MultipartConfig;
 
 import java.util.*;
 import annotation.*;
+import exception.ValidationException;
 import util.*;
 import mapping.*;
 import com.google.gson.Gson;
 
 @MultipartConfig
-public class FrontControlleur extends HttpServlet {
+public class FrontServlet extends HttpServlet {
 
     private String basePackage;
     HashMap<String, MyMapping> mappings;
+
+    String getBaseUrl(HttpServletRequest request) {
+        return request.getScheme() + "://" +
+                request.getServerName() +
+                ":" +
+                request.getServerPort() +
+                request.getContextPath();
+    }
+
+    public void goToPreviousRessource(Object errorHandler, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        String clientVerb = "GET";
+        String previousUrl = request.getParameter("origin");
+        if (mappings.containsKey(previousUrl)) {
+            MyMapping mapping = mappings.get(previousUrl);
+            Method mMatched = this.checkVerbException(mapping, clientVerb);
+            ModelView mV = (ModelView) mapping.invokeMethode(request, mMatched);
+            mV.add("dataError", errorHandler);
+            this.resolveRequest(mapping, mMatched, request, response, mV);
+        }
+    }
 
     public Runnable checkSessionParam(Method mConcerned, HttpServletRequest request) throws Exception {
         Parameter[] mParameters = mConcerned.getParameters();
@@ -74,18 +97,15 @@ public class FrontControlleur extends HttpServlet {
         };
     }
 
-    void checkRequest(MyMapping map, Method mMatched, HttpServletRequest request, HttpServletResponse response)
+    void resolveRequest(MyMapping map, Method mMatched, HttpServletRequest request, HttpServletResponse response,
+            Object valueToHandle)
             throws Exception {
-        Object valueToHandle = map.invokeMethode(request, mMatched);
-        // case restApi annotation in class :
-        // if(map.getMethod().getDeclaringClass().isAnnotationPresent(RestApi.class)) {
-
         // case restApi annotation in method
         if (mMatched.isAnnotationPresent(RestApi.class)
                 || mMatched.getDeclaringClass().isAnnotationPresent(RestApi.class)) {
             resolveRestRequest(valueToHandle, request, response);
         } else {
-            new FrontControlleur().resolveUrl(valueToHandle, request, response);
+            new FrontServlet().resolveUrl(valueToHandle, request, response);
         }
     }
 
@@ -118,10 +138,17 @@ public class FrontControlleur extends HttpServlet {
                 // case MySession as a parameter
                 ((Runnable) invokeParams[0]).run();
 
-                this.resolveUrl(object, request, response);
+                this.resolveRequest(mapping, mConcerned, request, response, object);
+
+                // this.resolveUrl(object, request, response);
                 return true;
             }
         } catch (Exception e) {
+            if (e instanceof ValidationException) {
+                ValidationException vE = (ValidationException) e;
+                this.goToPreviousRessource(vE.getErrorToPass(), request, response);
+                return true;
+            }
             throw e;
         }
         return false;
@@ -145,6 +172,11 @@ public class FrontControlleur extends HttpServlet {
     // }
     // return result;
     // }
+
+    void writeModifiedContent(HttpServletResponse response, String modifiedContent) throws IOException {
+        PrintWriter out = response.getWriter();
+        out.write(modifiedContent);
+    }
 
     void resolveRestRequest(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -179,7 +211,7 @@ public class FrontControlleur extends HttpServlet {
         } else if (valToHandle instanceof ModelView) {
             ModelView mv = (ModelView) valToHandle;
             try {
-                RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+                CharResponseWrapper responseWrapper = new CharResponseWrapper(response);
                 if (!mv.getData().isEmpty()) {
                     HashMap<String, Object> datas = mv.getData();
                     Iterator<String> keys = datas.keySet().iterator();
@@ -188,7 +220,12 @@ public class FrontControlleur extends HttpServlet {
                         request.setAttribute(dataKey, datas.get(dataKey));
                     }
                 }
-                dispatcher.forward(request, response);
+                RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+                dispatcher.forward(request, responseWrapper);
+
+                String modifiedContent = responseWrapper.processJspContent(responseWrapper.toString(), request);
+                // System.out.println("tafanova anle contenu tq : " + modifiedContent);
+                this.writeModifiedContent(response, modifiedContent);
             } catch (Exception e) {
                 throw e;
             }
@@ -253,12 +290,13 @@ public class FrontControlleur extends HttpServlet {
                     return;
                 }
                 // no data
-                this.checkRequest(map, mMatched, request, response);
+
+                this.resolveRequest(map, mMatched, request, response, map.invokeMethode(request, mMatched));
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
-                // e.printStackTrace();
+                e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 

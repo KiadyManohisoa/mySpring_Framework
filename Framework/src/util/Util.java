@@ -6,11 +6,14 @@ import java.net.*;
 import java.lang.reflect.*;
 import java.lang.annotation.Annotation;
 import mapping.*;
-import annotation.*;
 
 public class Util {
 
     public Util() {
+    }
+
+    public static String getUrlPath(String referer, String baseURL) {
+        return referer.substring(baseURL.length());
     }
 
     public boolean isNumeric(String str) {
