@@ -4,7 +4,7 @@ import java.lang.reflect.*;
 
 import annotation.Post;
 import jakarta.servlet.http.*;
-import servlets.FrontControlleur;
+import servlets.FrontServlet;
 import util.Convertor;
 import util.Syntaxe;
 import java.util.Set;
@@ -17,7 +17,7 @@ public class MyMapping {
 
     public VerbMethod getVerbMethod(String verbRequest) throws Exception {
         for (VerbMethod vbm : this.getVerbMethods()) {
-            if (vbm.getVerb().equals(verbRequest)) {
+            if (vbm.getVerb().equalsIgnoreCase(verbRequest)) {
                 return vbm;
             }
         }
@@ -27,7 +27,7 @@ public class MyMapping {
     public void addVerbMethod(VerbMethod vbm) throws RuntimeException {
         if (!this.getVerbMethods().add(vbm)) {
             throw new RuntimeException(
-                    "Deux méthodes ne peuvent pas avoir le même verb http ou la même méthode");
+                    "Different methods must have different HTTP verbs");
         }
     }
 
@@ -63,14 +63,15 @@ public class MyMapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object invokeMethode(HttpServletRequest request, Method mConcerned) throws Exception {
+    public Object invokeMethode(HttpServletRequest request, Method mConcerned, FrontServlet frontServlet)
+            throws Exception {
         Object objectReturned = new Object();
         try {
             Class<?> clazz = Class.forName(this.getClassName());
             Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
             Object[] invokeParams = initializeParameters(mConcerned, request);
-            Runnable sessionCallbackAsField = new FrontControlleur().checkSessionField(invokingObject, request);
+            Runnable sessionCallbackAsField = frontServlet.checkSessionField(invokingObject, request);
             objectReturned = mConcerned.invoke(invokingObject, (Object[]) invokeParams[0]);
 
             // case MySession as a field

@@ -11,7 +11,11 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import annotation.FieldParameter;
 import annotation.RequestParameter;
+import exception.ValidationException;
 import mapping.MySession;
+import upload.MultiPartHandler;
+import validation.MessageValue;
+import validation.ValueController;
 
 public class Reflect {
 
@@ -19,7 +23,6 @@ public class Reflect {
             throws Exception {
         Control control = new Control();
         if (inputNameAssociedToObject.size() > 0) {
-            System.out.println("inputNameATO" + inputNameAssociedToObject.size());
             for (String inputName : inputNameAssociedToObject) {
                 int idParameter = this.findIdParameter(parameters, inputName);
                 if (idParameter != -1) {
@@ -90,10 +93,12 @@ public class Reflect {
         this.checkParameters(mParameters, new Class<?>[] { MySession.class });
 
         ArrayList<String> inputNameAssociatedToObject = new ArrayList<>();
+
+        ValueController vC = new ValueController();
         for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
             String inputName = entry.getKey();
             String[] inputValue = entry.getValue();
-            System.out.println("inputName " + inputName + " value " + inputValue[0]);
+            // System.out.println("inputName " + inputName + " value " + inputValue[0]);
             // wanna set value to an object
             if (inputName.contains(".")) {
                 String[] objSpecs = inputName.split("\\.");
@@ -103,13 +108,13 @@ public class Reflect {
                         if (paramsAssignationMap.containsKey(objSpecs[0])) {
                             int idToAssign = paramsAssignationMap.get(objSpecs[0]);
                             Object toAssign = invokeParams[idToAssign];
-                            reflect.assignValueToObject(toAssign, objSpecs[1],
-                                    inputValue[0]);
+                            reflect.assignValueToObject(toAssign, objSpecs[1], inputName,
+                                    inputValue[0], vC);
                         } else {
                             inputNameAssociatedToObject.add(objSpecs[0]);
                             Object toAssign = reflect.instanceObjectFromParm(objSpecs[0], mParameters);
-                            reflect.assignValueToObject(toAssign, objSpecs[1],
-                                    inputValue[0]);
+                            reflect.assignValueToObject(toAssign, objSpecs[1], inputName,
+                                    inputValue[0], vC);
                             invokeParams[idParameter] = toAssign;
                             paramsAssignationMap.put(objSpecs[0], idParameter);
                         }
@@ -131,8 +136,15 @@ public class Reflect {
 
         }
 
+        if (vC.isHasError()) {
+            // System.out.println("misy blem");
+            throw new ValidationException(vC);
+        } else {
+            // System.out.println("tsisy blem");
+        }
+
         // Control the value of objets binded with an input
-        this.controlValue(inputNameAssociatedToObject, mParameters, invokeParams);
+        // this.controlValue(inputNameAssociatedToObject, mParameters, invokeParams);
 
         // // Ensure all parameters are assigned a value
         this.checkLeftParams(mParameters, invokeParams, request, callback);
@@ -175,20 +187,23 @@ public class Reflect {
         }
     }
 
-    public void assignValueToObject(Object reference, String attrSearch, String inputValue)
+    public void assignValueToObject(Object reference, String attrSearch, String inputName, String inputValue,
+            ValueController vC)
             throws Exception {
         try {
             Control control = new Control();
             Field[] fields = reference.getClass().getDeclaredFields();
             for (int i = 0; i < fields.length; i++) {
-                // System.out.println("the attribute we are searching on " + attrSearch + " the
-                // actuel attributeName "
-                // + fields[i].getName());
 
                 if (fields[i].getName().equals(attrSearch) || (fields[i].isAnnotationPresent(FieldParameter.class)
                         && fields[i].getAnnotation(FieldParameter.class).value().equals(attrSearch))) {
-                    // System.out.println("tafiditra ato " + attrSearch);
-                    control.checkOnField(fields[i], inputValue);
+
+                    if (control.isFieldInvalid(fields[i], inputValue, inputName, vC)) {
+                        // System.out.println("yes" + attrSearch + " was invalid");
+                        break;
+                    } else {
+                        vC.add(inputName, new MessageValue(inputValue));
+                    }
                     Method mSetter = reference.getClass().getDeclaredMethod(
                             "set" + Syntaxe.getSetterGetterNorm(fields[i].getName()),
                             new Class[] { fields[i].getType() });

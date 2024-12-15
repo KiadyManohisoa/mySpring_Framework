@@ -17,12 +17,17 @@ mkdir "%binPath%"
 
 :: Parcourir récursivement tous les fichiers .java dans src et les copier dans tempJava
 for /r "%srcPath%" %%f in (*.java) do (
-    echo %%f
     copy "%%f" "!tempJava!" /Y
 )
 
 rem compilation des src java vers bin
 javac -cp %libPath%* -d %binPath% ..\tempJava\*.java
+
+rem Vérifier si la compilation a échoué
+if %errorlevel% neq 0 (
+    echo Erreur de compilation.
+    exit /b %errorlevel%
+)
 
 rem archivage en jar du contenu de bin
 pushd "%binPath%"
@@ -39,3 +44,5 @@ xcopy "%errorHandler%" %testPath%\lib /Y
 rem suppression de tempJava et binPath
 rmdir /s /q "%tempJava%"
 rmdir /s /q "%binPath%"
+
+echo Framework built successfully !
