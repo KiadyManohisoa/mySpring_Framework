@@ -63,14 +63,15 @@ public class MyMapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object invokeMethode(HttpServletRequest request, Method mConcerned) throws Exception {
+    public Object invokeMethode(HttpServletRequest request, Method mConcerned, FrontServlet frontServlet)
+            throws Exception {
         Object objectReturned = new Object();
         try {
             Class<?> clazz = Class.forName(this.getClassName());
             Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
             Object[] invokeParams = initializeParameters(mConcerned, request);
-            Runnable sessionCallbackAsField = new FrontServlet().checkSessionField(invokingObject, request);
+            Runnable sessionCallbackAsField = frontServlet.checkSessionField(invokingObject, request);
             objectReturned = mConcerned.invoke(invokingObject, (Object[]) invokeParams[0]);
 
             // case MySession as a field

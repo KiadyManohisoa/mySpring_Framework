@@ -38,7 +38,7 @@ public class FrontServlet extends HttpServlet {
         if (mappings.containsKey(previousUrl)) {
             MyMapping mapping = mappings.get(previousUrl);
             Method mMatched = this.checkVerbException(mapping, clientVerb);
-            ModelView mV = (ModelView) mapping.invokeMethode(request, mMatched);
+            ModelView mV = (ModelView) mapping.invokeMethode(request, mMatched, this);
             mV.add("dataError", errorHandler);
             this.resolveRequest(mapping, mMatched, request, response, mV);
         }
@@ -105,7 +105,7 @@ public class FrontServlet extends HttpServlet {
                 || mMatched.getDeclaringClass().isAnnotationPresent(RestApi.class)) {
             resolveRestRequest(valueToHandle, request, response);
         } else {
-            new FrontServlet().resolveUrl(valueToHandle, request, response);
+            this.resolveUrl(valueToHandle, request, response);
         }
     }
 
@@ -223,7 +223,7 @@ public class FrontServlet extends HttpServlet {
                 RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
                 dispatcher.forward(request, responseWrapper);
 
-                String modifiedContent = responseWrapper.processJspContent(responseWrapper.toString(), request);
+                String modifiedContent = responseWrapper.processJspContent(responseWrapper.toString(), request, this);
                 // System.out.println("tafanova anle contenu tq : " + modifiedContent);
                 this.writeModifiedContent(response, modifiedContent);
             } catch (Exception e) {
@@ -291,7 +291,7 @@ public class FrontServlet extends HttpServlet {
                 }
                 // no data
 
-                this.resolveRequest(map, mMatched, request, response, map.invokeMethode(request, mMatched));
+                this.resolveRequest(map, mMatched, request, response, map.invokeMethode(request, mMatched, this));
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");

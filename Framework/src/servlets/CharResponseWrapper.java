@@ -24,11 +24,11 @@ public class CharResponseWrapper extends HttpServletResponseWrapper {
         return charWriter.toString();
     }
 
-    public String processJspContent(String originalContent, HttpServletRequest request) {
+    public String processJspContent(String originalContent, HttpServletRequest request, FrontServlet frontServlet) {
         String returnToValue = null;
         if (request.getParameter("origin") == null) {
             returnToValue = Util.getUrlPath(request.getRequestURL().toString(),
-                    new FrontServlet().getBaseUrl(request));
+                    frontServlet.getBaseUrl(request));
         } else {
             returnToValue = request.getParameter("origin");
         }
