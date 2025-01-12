@@ -2,18 +2,53 @@ package mapping;
 
 import java.lang.reflect.*;
 
-import annotation.Post;
 import jakarta.servlet.http.*;
 import servlets.FrontServlet;
+import util.ConfigReader;
 import util.Convertor;
-import util.Syntaxe;
 import java.util.Set;
 import java.util.HashSet;
+import annotation.permission.Logged;
+import configuration.Configuration;
+import exception.PermissionException;
 
 public class MyMapping {
 
     String className;
     Set<VerbMethod> verbMethods;
+
+    public void verifyPrivileges(Logged loggedAnnotation, Object sessionValue) throws Exception { 
+        Class<?>[] allowedClasses = loggedAnnotation.value(); 
+        boolean hasAccess = false; 
+        for (Class<?> allowedClass : allowedClasses) { 
+            if (allowedClass.isInstance(sessionValue)) { 
+                hasAccess = true; 
+                break; 
+            } 
+        } 
+        if (!hasAccess) { 
+            throw new PermissionException("Access denied: User does not have the required privileges."); 
+        } 
+    }
+
+    public void verifyLogState(MySession mySession) throws Exception {
+        String keyToSearch = new ConfigReader().getProperty(Configuration.userKeyNaming);
+        if(mySession.get(new ConfigReader().getProperty(Configuration.userKeyNaming))==null) {
+            throw new PermissionException("Access to this method is restricted to authenticated users");
+        }
+    }
+    
+    public void verifyPermission(Method mMatched, HttpServletRequest request) throws Exception {
+        if(mMatched.isAnnotationPresent(Logged.class)) {
+            Logged loggedAnnotation = mMatched.getAnnotation(Logged.class); 
+            MySession mySession = new MySession();
+            mySession.setKeyValues(request.getSession());
+            this.verifyLogState(mySession);
+            if(loggedAnnotation.value().length>0) {
+                this.verifyPrivileges(loggedAnnotation, mySession.get(new ConfigReader().getProperty(Configuration.userKeyNaming)));
+            }
+        }
+    }
 
     public VerbMethod getVerbMethod(String verbRequest) throws Exception {
         for (VerbMethod vbm : this.getVerbMethods()) {
