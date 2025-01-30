@@ -284,6 +284,7 @@ public class FrontServlet extends HttpServlet {
             MyMapping map = mappings.get(servletPath);
             try {
                 Method mMatched = this.checkVerbException(map, clientVerb);
+                map.verifyPermission(mMatched, request);
 
                 // sending data to controller's method (url/request body)
                 if (this.hasPassedParameters(request, response, map, mMatched)) {
@@ -296,7 +297,7 @@ public class FrontServlet extends HttpServlet {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
-                e.printStackTrace();
+                // e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
