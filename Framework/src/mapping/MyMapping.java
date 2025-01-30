@@ -31,11 +31,12 @@ public class MyMapping {
         } 
     }
 
-    public void verifyLogState(MySession mySession) throws Exception {
+    public String verifyLogState(MySession mySession) throws Exception {
         String keyToSearch = new ConfigReader().getProperty(Configuration.userKeyNaming);
-        if(mySession.get(new ConfigReader().getProperty(Configuration.userKeyNaming))==null) {
+        if(mySession.get(keyToSearch)==null) {
             throw new PermissionException("Access to this method is restricted to authenticated users");
         }
+        return keyToSearch;
     }
     
     public void verifyPermission(Method mMatched, HttpServletRequest request) throws Exception {
@@ -43,9 +44,9 @@ public class MyMapping {
             Logged loggedAnnotation = mMatched.getAnnotation(Logged.class); 
             MySession mySession = new MySession();
             mySession.setKeyValues(request.getSession());
-            this.verifyLogState(mySession);
+            String keyToSearch = this.verifyLogState(mySession);
             if(loggedAnnotation.value().length>0) {
-                this.verifyPrivileges(loggedAnnotation, mySession.get(new ConfigReader().getProperty(Configuration.userKeyNaming)));
+                this.verifyPrivileges(loggedAnnotation, mySession.get(keyToSearch));
             }
         }
     }
