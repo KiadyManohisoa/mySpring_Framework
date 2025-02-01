@@ -1,6 +1,5 @@
 package util;
 
-import java.util.*;
 import java.lang.reflect.*;
 
 public class Convertor {
@@ -22,12 +21,12 @@ public class Convertor {
             } else if (paramType.equals(String.class)) {
                 return inputValue;
             } else {
-                throw new IllegalArgumentException("Type de paramètre non pris en charge: " + paramType);
+                throw new IllegalArgumentException("Unsupported parameter type: " + paramType);
             }
         } catch (Exception e) {
             throw new IllegalArgumentException(
-                    "Erreur de cast pour la valeur: " + inputValue + " et le type: " + paramType, e);
-        }
+                    "Casting error for value: " + inputValue + " and type: " + paramType, e);
+        }        
     }
 
 }

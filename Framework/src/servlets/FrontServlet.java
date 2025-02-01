@@ -119,16 +119,14 @@ public class FrontServlet extends HttpServlet {
             if (!parameterMap.isEmpty() || (request.getContentType() != null
                     && request.getContentType().toLowerCase().startsWith("multipart/"))) {
                 Reflect reflect = new Reflect();
+                RunnableWrapper rnw = new RunnableWrapper();
                 Class<?> clazz = Class.forName(mapping.getClassName());
                 Parameter[] methodParameters = mConcerned.getParameters();
                 Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
+                
                 Object[] invokeParams = reflect.prepareInvokeParams(parameterMap,
-                        methodParameters, invokingObject, request);
-
-                // ensure all parameters are assigned a value
-                reflect.checkLeftParams(methodParameters, (Object[]) invokeParams[1], request,
-                        (Runnable) invokeParams[0]);
+                        methodParameters, invokingObject, request, rnw);
 
                 // case MySession as a field
                 Runnable sessionCallbackAsField = this.checkSessionField(invokingObject, request);
@@ -136,7 +134,7 @@ public class FrontServlet extends HttpServlet {
                 sessionCallbackAsField.run();
 
                 // case MySession as a parameter
-                ((Runnable) invokeParams[0]).run();
+                rnw.getCallback().run();
 
                 this.resolveRequest(mapping, mConcerned, request, response, object);
 
@@ -230,8 +228,9 @@ public class FrontServlet extends HttpServlet {
                 throw e;
             }
         } else {
-            throw new Exception("Le type de retour " + valToHandle.getClass().getName()
-                    + " n'est pas pris en charge pour l'assignation d'url");
+            throw new Exception("The return type " + valToHandle.getClass().getName()
+            + " is not supported for URL assignment");
+    
         }
     }
 
@@ -270,6 +269,7 @@ public class FrontServlet extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         PrintWriter out = response.getWriter();
         String clientVerb = request.getMethod();
         try {
@@ -291,12 +291,12 @@ public class FrontServlet extends HttpServlet {
                     return;
                 }
                 // no data
-
-                this.resolveRequest(map, mMatched, request, response, map.invokeMethode(request, mMatched, this));
+                Object invokedObject = map.invokeMethode(request, mMatched, this);
+                this.resolveRequest(map, mMatched, request, response, invokedObject);
             } catch (Exception e) {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
-                request.setAttribute("error", "ETU2375 : " + e.getLocalizedMessage());
+                request.setAttribute("error", "ETU002375 : " + e.getLocalizedMessage());
                 // e.printStackTrace();
                 dispatcher.forward(request, response);
             }
@@ -345,14 +345,14 @@ public class FrontServlet extends HttpServlet {
 
     // print methods
     // void printHttpSession(HttpServletRequest request) {
-    // HttpSession session = request.getSession();
-    // System.out.println("Here are the session " + session.getId() + "key_values");
-    // Enumeration<String> sessionKeys = session.getAttributeNames();
-    // while (sessionKeys.hasMoreElements()) {
-    // String key = sessionKeys.nextElement();
-    // System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
-    // }
-    // System.out.println();
+    //     HttpSession session = request.getSession();
+    //     System.out.println("Here are the session " + session.getId() + " key_values ");
+    //     Enumeration<String> sessionKeys = session.getAttributeNames();
+    //     while (sessionKeys.hasMoreElements()) {
+    //     String key = sessionKeys.nextElement();
+    //     System.out.println("<" + key + ">" + ":" + session.getAttribute(key));
+    //     }
+    //     System.out.println();
     // }
 
 }

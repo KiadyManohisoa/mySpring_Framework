@@ -3,7 +3,7 @@ package annotation.permission;
 import java.lang.annotation.*;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ ElementType.TYPE, ElementType.METHOD })
 
 public @interface Logged {
 

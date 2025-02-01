@@ -1,10 +1,10 @@
 package util;
 
 import java.io.*;
-import java.util.*;
-import java.net.*;
-import java.lang.reflect.*;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.*;
+import java.net.*;
+import java.util.*;
 import mapping.*;
 
 public class Util {
@@ -55,7 +55,7 @@ public class Util {
                         myMapping.addVerbMethod(new VerbMethod(methods[i]));
                     } else {
                         throw new RuntimeException(
-                                "Deux méthodes d'une même url ne peuvent être définies que dans une même classe");
+                                "Two methods with the same URL can only be defined within the same class");
                     }
                     // throw new RuntimeException(
                     // "L'url '" + value
@@ -80,8 +80,8 @@ public class Util {
             File directory = new File(URLDecoder.decode(resource.getFile(), "UTF-8"));
             if (directory.isDirectory()) {
                 if (directory.listFiles().length == 0) {
-                    throw new RuntimeException("Le dossier à scanner " + basePackage + " pour l'annotation "
-                            + annotation.getName() + " est vide");
+                    throw new RuntimeException("The folder to scan " + basePackage + " for the annotation "
+                    + annotation.getName() + " is empty");            
                 }
                 search = true; // est un dossier et n'est pas vide
                 searchClassesInDirectory(lsClasses, directory, basePackage, classLoader, annotation);
@@ -89,8 +89,8 @@ public class Util {
         }
 
         if (!search) {
-            throw new RuntimeException("Le dossier à scanner " + basePackage + " pour l'annotation "
-                    + annotation.getName() + " n'existe pas");
+            throw new RuntimeException("The folder to scan " + basePackage + " for the annotation "
+            + annotation.getName() + " does not exist");    
 
         }
 
