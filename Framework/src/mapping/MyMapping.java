@@ -17,6 +17,17 @@ public class MyMapping {
     String className;
     Set<VerbMethod> verbMethods;
 
+    public Logged hasLoggedAnnotation(Method m, HttpServletRequest request) {
+        Logged annotation = null;
+        if(m.getDeclaringClass().isAnnotationPresent(Logged.class)) {
+            annotation = m.getDeclaringClass().getAnnotation(Logged.class);
+        }
+        else if (m.isAnnotationPresent(Logged.class)) {
+            annotation = m.getAnnotation(Logged.class);
+        }
+        return annotation;
+    }
+
     public void verifyPrivileges(Logged loggedAnnotation, Object sessionValue) throws Exception { 
         Class<?>[] allowedClasses = loggedAnnotation.value(); 
         boolean hasAccess = false; 
@@ -40,10 +51,12 @@ public class MyMapping {
     }
     
     public void verifyPermission(Method mMatched, HttpServletRequest request) throws Exception {
-        if(mMatched.isAnnotationPresent(Logged.class)) {
-            Logged loggedAnnotation = mMatched.getAnnotation(Logged.class); 
+        Logged loggedAnnotation = this.hasLoggedAnnotation(mMatched, request); 
+        if(loggedAnnotation!=null) {
             MySession mySession = new MySession();
             mySession.setKeyValues(request.getSession());
+            // System.out.println("Etat de la session");
+            // mySession.print();
             String keyToSearch = this.verifyLogState(mySession);
             if(loggedAnnotation.value().length>0) {
                 this.verifyPrivileges(loggedAnnotation, mySession.get(keyToSearch));

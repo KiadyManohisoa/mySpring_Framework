@@ -13,6 +13,7 @@ import annotation.FieldParameter;
 import annotation.RequestParameter;
 import exception.ValidationException;
 import mapping.MySession;
+import servlets.RunnableWrapper;
 import upload.MultiPartHandler;
 import validation.MessageValue;
 import validation.ValueController;
@@ -34,17 +35,18 @@ public class Reflect {
     }
 
     public void checkLeftParams(Parameter[] mParameters, Object[] invokeParams, HttpServletRequest request,
-            Runnable callback) throws Exception {
+            RunnableWrapper rnw) throws Exception {
         Convertor convertor = new Convertor();
         for (int i = 0; i < mParameters.length; i++) {
             if (invokeParams[i] == null) {
                 if (mParameters[i].getType().equals(MySession.class)) {
+                    // System.out.println("nisy mysession en paramètre");
                     Class<?> clazz = Class.forName(mParameters[i].getType().getName());
                     MySession mySession = (MySession) clazz.getDeclaredConstructor().newInstance();
                     mySession.setKeyValues(request.getSession());
-                    callback = () -> {
+                    rnw.setCallback(() -> {
                         mySession.updateHttpSession(request.getSession());
-                    };
+                    });
                     invokeParams[i] = mySession;
                 } else if (mParameters[i].getType().equals(MultiPartHandler.class)) {
                     MultiPartHandler handler = new MultiPartHandler();
@@ -80,7 +82,7 @@ public class Reflect {
 
     public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
             Object invokingObj,
-            HttpServletRequest request)
+            HttpServletRequest request, RunnableWrapper rnw)
             throws Exception {
         Object[] answers = new Object[2];
         Runnable callback = () -> {
@@ -147,7 +149,7 @@ public class Reflect {
         // this.controlValue(inputNameAssociatedToObject, mParameters, invokeParams);
 
         // // Ensure all parameters are assigned a value
-        this.checkLeftParams(mParameters, invokeParams, request, callback);
+        this.checkLeftParams(mParameters, invokeParams, request, rnw);
 
         answers[0] = callback;
         answers[1] = invokeParams;
@@ -164,12 +166,12 @@ public class Reflect {
                     if (i != 0) {
                         error += ", ";
                     }
-                    error += "le paramètre " + parameters[i].getName();
+                    error += "the parameter " + parameters[i].getName();
                 }
             }
         }
         if (!error.isEmpty()) {
-            throw new Exception("Veuillez annoter " + error);
+            throw new Exception("Please annotate " + error);
         }
     }
 
