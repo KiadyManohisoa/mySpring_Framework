@@ -240,7 +240,7 @@ public class FrontServlet extends HttpServlet {
         this.mappings = new HashMap<String, MyMapping>();
         try {
             basePackage = base;
-            List<Class<?>> classes = util.getClassesByAnnotation(basePackage, Controlleur.class);
+            List<Class<?>> classes = util.getClassesByAnnotation(basePackage, Controller.class);
             // init hashMaps with Controlleur and Url annotation
             for (int i = 0; i < classes.size(); i++) {
                 util.addMethodByAnnotation(classes.get(i), Url.class, this.mappings);
