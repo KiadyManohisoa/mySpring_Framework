@@ -12,6 +12,15 @@ public class Util {
     public Util() {
     }
 
+    public static String getPathWithoutRedirect(String url) {
+        int index = url.indexOf("redirect:") + "redirect:".length();
+        return url.substring(index);    
+    }
+
+    public static boolean isRedirect(String url) {
+        return url.contains("redirect:");
+    }
+
     public static String getUrlPath(String referer, String baseURL) {
         return referer.substring(baseURL.length());
     }

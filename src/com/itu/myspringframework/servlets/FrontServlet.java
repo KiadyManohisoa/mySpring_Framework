@@ -37,7 +37,7 @@ public class FrontServlet extends HttpServlet {
         String previousUrl = request.getParameter("origin");
         if (mappings.containsKey(previousUrl)) {
             MyMapping mapping = mappings.get(previousUrl);
-            Method mMatched = this.checkVerbException(mapping, clientVerb);
+            Method mMatched = this.checkVerbException(mapping, clientVerb, 1);
             ModelView mV = (ModelView) mapping.invokeMethode(request, mMatched, this);
             mV.add("dataError", errorHandler);
             this.resolveRequest(mapping, mMatched, request, response, mV);
@@ -263,8 +263,8 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
-    Method checkVerbException(MyMapping map, String verb) throws Exception {
-        return map.getVerbMethod(verb).getMethod();
+    Method checkVerbException(MyMapping map, String verb, int checkingVbm) throws Exception {
+        return map.getVerbMethod(verb, checkingVbm).getMethod();
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -280,10 +280,13 @@ public class FrontServlet extends HttpServlet {
         }
 
         String servletPath = request.getServletPath();
+        int checkingVbm = 1;
+        if(Util.isRedirect(servletPath)) servletPath = Util.getPathWithoutRedirect(servletPath); checkingVbm = 0;
+
         if (mappings.containsKey(servletPath)) {
             MyMapping map = mappings.get(servletPath);
             try {
-                Method mMatched = this.checkVerbException(map, clientVerb);
+                Method mMatched = this.checkVerbException(map, clientVerb, checkingVbm);
                 map.verifyPermission(mMatched, request);
 
                 // sending data to controller's method (url/request body)
