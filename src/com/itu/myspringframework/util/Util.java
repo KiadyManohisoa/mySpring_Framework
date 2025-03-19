@@ -1,20 +1,63 @@
 package com.itu.myspringframework.util;
 
-import com.itu.myspringframework.mapping.*;
-import java.io.*;
+import java.io.File;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.net.*;
-import java.util.*;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import com.itu.myspringframework.mapping.MyMapping;
+import com.itu.myspringframework.mapping.VerbMethod;
 
 public class Util {
 
     public Util() {
     }
 
+    public static boolean isArrayObjectInput(String inputName) {
+        String arrayObjectPattern = "^\\[\\d+\\]\\w+\\.\\w+$";
+        if (inputName.matches(arrayObjectPattern)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static Time parseTime(String time) throws Exception {
+        Time theTime = null;
+        try {
+            if (!time.matches("\\d{2}:\\d{2}:\\d{2}")) {
+                    time += ":00"; 
+            }        
+            theTime = Time.valueOf(time);
+        } catch (Exception e) {
+            throw new Exception("Format invalide pour l_heure : "+time);
+        }
+        return theTime;
+    }
+
+    public static Timestamp parseTimestamp(String date) throws Exception {
+        Timestamp datyLera = null;
+        try {
+            String formattedDate = date.replace("T", " ") + ":00";
+            datyLera = Timestamp.valueOf(formattedDate);
+        } catch (Exception e) {
+            throw new Exception("Format invalide pour la date-heure : "+date);
+        }
+        return datyLera;
+    }
+
     public static String getPathWithoutRedirect(String url) {
         int index = url.indexOf("redirect:") + "redirect:".length();
-        return url.substring(index);    
+        return url.substring(index); 
+        //return url.replaceFirst(".*redirect:", "");   
     }
 
     public static boolean isRedirect(String url) {

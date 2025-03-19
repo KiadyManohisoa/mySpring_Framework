@@ -75,16 +75,16 @@ public class MyMapping {
         return theVbm;
     }
 
-    public VerbMethod getVerbMethod(String verbRequest, int checkingVbm) throws Exception {
+    public VerbMethod getVerbMethod(String verbRequest) throws Exception {
         for (VerbMethod vbm : this.getVerbMethods()) {
             if (vbm.getVerb().equalsIgnoreCase(verbRequest)) {
                 return vbm;
             }
         }
-        if(checkingVbm==1) {
-            throw new Exception("Bad request, please verify your HTTP correspondance");
-        }
-        return this.getFirstOccurrenceGet();
+        throw new Exception("Bad request, please verify your HTTP correspondance");
+        // if(checkingVbm==1) {
+        // }
+        // return this.getFirstOccurrenceGet();
     }
 
     public void addVerbMethod(VerbMethod vbm) throws RuntimeException {

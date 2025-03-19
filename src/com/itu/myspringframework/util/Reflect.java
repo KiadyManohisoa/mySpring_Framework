@@ -2,12 +2,15 @@ package com.itu.myspringframework.util;
 
 import java.lang.reflect.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-
-import javax.swing.plaf.multi.MultiDesktopIconUI;
+import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Part;
 
 import com.itu.myspringframework.annotation.FieldParameter;
 import com.itu.myspringframework.annotation.RequestParameter;
@@ -80,74 +83,78 @@ public class Reflect {
         return idParameter;
     }
 
-    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
-            Object invokingObj,
-            HttpServletRequest request, RunnableWrapper rnw)
-            throws Exception {
-        Object[] answers = new Object[2];
-        Runnable callback = () -> {
-        };
-        Object[] invokeParams = new Object[mParameters.length];
-        HashMap<String, Integer> paramsAssignationMap = new HashMap<>();
-        Convertor convertor = new Convertor();
-        Reflect reflect = new Reflect();
-
-        this.checkParameters(mParameters, new Class<?>[] { MySession.class });
-
-        ArrayList<String> inputNameAssociatedToObject = new ArrayList<>();
-
-        ValueController vC = new ValueController();
-        for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
-            String inputName = entry.getKey();
-            String[] inputValue = entry.getValue();
-            // System.out.println("inputName " + inputName + " value " + inputValue[0]);
-            // wanna set value to an object
-            if (inputName.contains(".")) {
-                String[] objSpecs = inputName.split("\\.");
-                int idParameter = this.findIdParameter(mParameters, objSpecs[0]);
-                if (idParameter != -1) {
-                    if (this.canBeInstanced(objSpecs[0], mParameters)) {
-                        if (paramsAssignationMap.containsKey(objSpecs[0])) {
-                            int idToAssign = paramsAssignationMap.get(objSpecs[0]);
-                            Object toAssign = invokeParams[idToAssign];
-                            reflect.assignValueToObject(toAssign, objSpecs[1], inputName,
-                                    inputValue[0], vC);
-                        } else {
-                            inputNameAssociatedToObject.add(objSpecs[0]);
-                            Object toAssign = reflect.instanceObjectFromParm(objSpecs[0], mParameters);
-                            reflect.assignValueToObject(toAssign, objSpecs[1], inputName,
-                                    inputValue[0], vC);
-                            invokeParams[idParameter] = toAssign;
-                            paramsAssignationMap.put(objSpecs[0], idParameter);
+    public void assignForParts(Parameter[] mParameters, HttpServletRequest request, Object[] invokeParams, HashMap<String, Integer> paramsAssignationMap, ValueController vC) throws Exception {
+        if(!request.getParts().isEmpty()) {
+            // System.out.println("longueur de parts est" +request.getParts().size());
+            for(Part part : request.getParts()) {
+                // System.out.println("les noms sont "+part.getName());
+                String inputName = part.getName();
+                if (part.getSubmittedFileName() != null && !part.getSubmittedFileName().isEmpty()) {
+                    if(inputName.contains(".")) {
+                        String[] objSpecs = inputName.split("\\.");
+                        int idParameter = this.findIdParameter(mParameters, objSpecs[0]);
+                        if (idParameter != -1) {
+                            // if (this.canBeInstanced(objSpecs[0], mParameters)) {
+                                if (paramsAssignationMap.containsKey(objSpecs[0])) {
+                                    int idToAssign = paramsAssignationMap.get(objSpecs[0]);
+                                    Object toAssign = invokeParams[idToAssign];
+                                    this.assignValueToObject(toAssign, objSpecs[1], inputName,
+                                            "", vC, request);
+                                } else {
+                                    Object toAssign = this.instanceObjectFromParm(objSpecs[0], mParameters[idParameter]);
+                                    this.assignValueToObject(toAssign, objSpecs[1], inputName,
+                                            "", vC, request);
+                                    invokeParams[idParameter] = toAssign;
+                                    paramsAssignationMap.put(objSpecs[0], idParameter);
+                                }
+                            // }
                         }
                     }
                 }
             }
-            // wanna set value to a standard variable
-            else {
-                int idParameter = this.findIdParameter(mParameters, inputName);
-                if (idParameter != -1) {
-                    if (!paramsAssignationMap.containsKey(inputName)) {
-                        invokeParams[idParameter] = this.getParameterValue(inputName, inputValue[0],
-                                mParameters[idParameter],
-                                convertor);
-                        paramsAssignationMap.put(inputName, idParameter);
-                    }
+        }
+    }  
+
+    public Object[] prepareInvokeParams(Map<String, String[]> parameterMap, Parameter[] mParameters,
+                                        Object invokingObj, HttpServletRequest request, RunnableWrapper rnw) throws Exception {
+        Object[] answers = new Object[2];
+        Runnable callback = () -> {};
+        Object[] invokeParams = new Object[mParameters.length];
+        HashMap<String, Integer> paramsAssignationMap = new HashMap<>();
+        Convertor convertor = new Convertor();
+        ValueController vC = new ValueController();
+
+        this.checkParameters(mParameters, new Class<?>[] { MySession.class });
+
+        Enumeration<String> parameterNames = request.getParameterNames();
+
+        while (parameterNames.hasMoreElements()) {
+            String inputName = parameterNames.nextElement();
+            String[] inputValues = request.getParameterValues(inputName); // Récupérer toutes les valeurs pour ce nom
+            // System.out.println("for inputName "+inputName);
+            // System.out.print("Values are :");
+            // for (int i = 0; i < inputValues.length; i++) {
+                // System.out.println("value "+i+" "+inputValues[i]);
+            // }
+
+            // Traiter chaque valeur individuellement
+            for (String inputValue : inputValues) {
+                if (!inputValue.isEmpty()) {
+                    processInput(inputName, inputValue, mParameters, invokeParams, paramsAssignationMap, vC, request);
                 }
             }
-
         }
+        // for(int i=0;i<invokeParams.length;i++) {
+        //     if(invokeParams[i]==null) {
+                // System.out.println(i+" is still null");
+        //     }
+        // }
+        if(request.getContentType()!=null && request.getContentType().toLowerCase().startsWith("multipart/"))
+            this.assignForParts(mParameters, request, invokeParams, paramsAssignationMap, vC);
 
         if (vC.isHasError()) {
-            // System.out.println("misy blem");
             throw new ValidationException(vC);
-        } else {
-            // System.out.println("tsisy blem");
-        }
-
-        // Control the value of objets binded with an input
-        // this.controlValue(inputNameAssociatedToObject, mParameters, invokeParams);
-
+        } 
         // // Ensure all parameters are assigned a value
         this.checkLeftParams(mParameters, invokeParams, request, rnw);
 
@@ -155,7 +162,158 @@ public class Reflect {
         answers[1] = invokeParams;
 
         return answers;
+    }
 
+    private void processInput(String inputName, String inputValue, Parameter[] mParameters, Object[] invokeParams,
+            HashMap<String, Integer> paramsAssignationMap, ValueController vC, HttpServletRequest request) throws Exception {
+        
+        // System.out.println("[DEBUG] processInput: inputName=" + inputName + ", inputValue=" + inputValue);    
+        if (Util.isArrayObjectInput(inputName)) {
+            // System.out.println("[DEBUG] Processing as array object input");
+            processArrayObjectInput(inputName, inputValue, mParameters, invokeParams, paramsAssignationMap, vC, request);
+        } else if (inputName.contains(".")) {
+            // System.out.println("[DEBUG] Processing as single object input");
+            processSingleObjectInput(inputName, inputValue, mParameters, invokeParams, paramsAssignationMap, vC, request);
+        } else {
+            // System.out.println("[DEBUG] Processing as standard input");
+            processStandardInput(inputName, inputValue, mParameters, invokeParams, paramsAssignationMap, request);
+        }
+    }
+
+    Set<String> extractExpectedAttributes(Map<String, String[]> parameterMap, String paramName) {
+        Set<String> expectedAttributes = new HashSet<>();
+        for (String inputName : parameterMap.keySet()) {
+            if (inputName.startsWith("[]" + paramName + ".")) {
+                String[] objSpecs = inputName.split("\\.");
+                if (objSpecs.length > 1) {
+                    expectedAttributes.add(objSpecs[1]);
+                }
+            }
+        }
+        return expectedAttributes;
+    }   
+
+    private void processArrayObjectInput(String inputName, String inputValue, Parameter[] mParameters, Object[] invokeParams,
+        HashMap<String, Integer> paramsAssignationMap, ValueController vC, HttpServletRequest request) throws Exception {
+    
+    // System.out.println("[DEBUG] processArrayObjectInput: inputName=" + inputName + ", inputValue=" + inputValue);
+    int index = extractIndexFromInputName(inputName);
+    String paramName = extractParamNameFromInputName(inputName);
+
+    // System.out.println("[DEBUG] Extracted index=" + index + ", paramName=" + paramName);
+
+    int idParameter = findIdParameter(mParameters, paramName);
+    // System.out.println("[DEBUG] idParameter=" + idParameter);
+
+    if (idParameter != -1) {
+        // System.out.println("[DEBUG] Parameter found, processing...");
+        
+        List<Object> objectList = getOrCreateObjectList(paramName, invokeParams, paramsAssignationMap, idParameter);
+        // System.out.println("[DEBUG] objectList size=" + objectList.size());
+        
+        Object targetObject = getOrCreateObjectAtIndex(objectList, index, paramName, mParameters[idParameter]);
+        // System.out.println("[DEBUG] targetObject=" + targetObject);
+        
+        String attributeName = extractAttributeNameFromInputName(inputName);
+        // System.out.println("[DEBUG] attributeName=" + attributeName);
+        
+        assignValueToObject(targetObject, attributeName, inputName, inputValue, vC, request);
+        // System.out.println("[DEBUG] Value assigned successfully");
+    } else {
+        // System.out.println("[DEBUG] Parameter not found: " + paramName);
+        throw new IllegalArgumentException("Parameter not found: " + paramName);
+    }
+    }
+
+    private String extractAttributeNameFromInputName(String inputName) {
+        int startIndex = inputName.lastIndexOf('.') + 1;
+        String attributeName = inputName.substring(startIndex);
+        // System.out.println("[DEBUG] extractAttributeNameFromInputName: inputName=" + inputName + ", attributeName=" + attributeName);
+        return attributeName;
+    }
+    
+
+    private int extractIndexFromInputName(String inputName) {
+        int startIndex = inputName.indexOf('[') + 1;
+        int endIndex = inputName.indexOf(']');
+        int index = Integer.parseInt(inputName.substring(startIndex, endIndex));
+        // System.out.println("[DEBUG] extractIndexFromInputName: inputName=" + inputName + ", index=" + index);
+        return index;
+    }
+    
+    private String extractParamNameFromInputName(String inputName) {
+        int startIndex = inputName.indexOf(']') + 1;
+        int endIndex = inputName.indexOf('.');
+        String paramName = inputName.substring(startIndex, endIndex);
+        // System.out.println("[DEBUG] extractParamNameFromInputName: inputName=" + inputName + ", paramName=" + paramName);
+        return paramName;
+    }
+    
+
+    private void processSingleObjectInput(String inputName, String inputValue, Parameter[] mParameters, Object[] invokeParams,
+                                        HashMap<String, Integer> paramsAssignationMap, ValueController vC, HttpServletRequest request) throws Exception {
+        String[] objSpecs = inputName.split("\\.");
+        int idParameter = findIdParameter(mParameters, objSpecs[0]);
+
+        if (idParameter != -1) {
+            Object toAssign = getOrCreateObject(objSpecs[0], invokeParams, paramsAssignationMap, mParameters[idParameter], idParameter);
+            if(toAssign==null) {
+                // System.out.println("problem with the input name ="+inputName);
+            }
+            assignValueToObject(toAssign, objSpecs[1], inputName, inputValue, vC, request);
+        }
+    }
+
+    private void processStandardInput(String inputName, String inputValue, Parameter[] mParameters, Object[] invokeParams,
+                                    HashMap<String, Integer> paramsAssignationMap, HttpServletRequest request) throws Exception {
+        int idParameter = findIdParameter(mParameters, inputName);
+        if (idParameter != -1 && !paramsAssignationMap.containsKey(inputName)) {
+            invokeParams[idParameter] = getParameterValue(inputName, inputValue, mParameters[idParameter], new Convertor(), request);
+            paramsAssignationMap.put(inputName, idParameter);
+        }
+    }
+
+    private List<Object> getOrCreateObjectList(String paramName, Object[] invokeParams, HashMap<String, Integer> paramsAssignationMap, int idParameter) throws Exception {
+        // System.out.println("[DEBUG] getOrCreateObjectList: paramName=" + paramName + ", idParameter=" + idParameter);
+    
+        if (paramsAssignationMap.containsKey(paramName)) {
+            // System.out.println("[DEBUG] List exists in invokeParams: " + invokeParams[idParameter]);
+            return (List<Object>) invokeParams[idParameter];
+        } else {
+            // System.out.println("[DEBUG] Creating new list for paramName=" + paramName);
+            List<Object> objectList = new ArrayList<>();
+            invokeParams[idParameter] = objectList;
+            paramsAssignationMap.put(paramName, idParameter);
+            return objectList;
+        }
+    }
+
+    private Object getOrCreateObjectAtIndex(List<Object> objectList, int index, String paramName, Parameter parameter) throws Exception {
+        // System.out.println("[DEBUG] getOrCreateObjectAtIndex: objectList size=" + objectList.size() + ", index=" + index);
+    
+        while (objectList.size() <= index) {
+            // System.out.println("[DEBUG] Creating new object for index=" + index);
+            objectList.add(instanceObjectFromParm(paramName, parameter));
+        }
+    
+        Object targetObject = objectList.get(index);
+        // System.out.println("[DEBUG] Retrieved targetObject=" + targetObject);
+        return targetObject;
+    }
+
+    private Object getOrCreateObject(String paramName, Object[] invokeParams, HashMap<String, Integer> paramsAssignationMap, Parameter parameter, int idParameter) throws Exception {
+        // System.out.println("[DEBUG] getOrCreateObject: paramName=" + paramName + ", idParameter=" + idParameter);
+
+        if (paramsAssignationMap.containsKey(paramName)) {
+            // System.out.println("[DEBUG] Object exists in invokeParams: " + invokeParams[paramsAssignationMap.get(paramName)]);
+            return invokeParams[paramsAssignationMap.get(paramName)];
+        } else {
+            // System.out.println("[DEBUG] Creating new object for paramName=" + paramName);
+            Object newObject = instanceObjectFromParm(paramName, parameter);
+            invokeParams[idParameter] = newObject;
+            paramsAssignationMap.put(paramName, idParameter);
+            return newObject;
+        }
     }
 
     void checkParameters(Parameter[] parameters, Class<?>[] notToCheck) throws Exception {
@@ -175,12 +333,12 @@ public class Reflect {
         }
     }
 
-    Object getParameterValue(String inputName, String inputValue, Parameter parameter, Convertor convertor)
+    Object getParameterValue(String inputName, String inputValue, Parameter parameter, Convertor convertor, HttpServletRequest request)
             throws Exception {
         RequestParameter annotation = parameter.getAnnotation(RequestParameter.class);
 
         if ((annotation != null && inputName.equals(annotation.value())) || (inputName.equals(parameter.getName()))) {
-            return convertor.convertInputToParam(inputValue, parameter.getType());
+            return convertor.convertInputToParam(inputValue, inputName, parameter.getType(), inputName, request);
             // } else if (inputName.equals(parameter.getName())) {
             // return convertor.convertInputToParam(inputValue, parameter.getType());
             // }
@@ -190,29 +348,28 @@ public class Reflect {
     }
 
     public void assignValueToObject(Object reference, String attrSearch, String inputName, String inputValue,
-            ValueController vC)
+            ValueController vC, HttpServletRequest request)
             throws Exception {
         try {
             Control control = new Control();
-            Field[] fields = reference.getClass().getDeclaredFields();
+            Field[] fields = this.getAllFields(reference.getClass());
             for (int i = 0; i < fields.length; i++) {
 
                 if (fields[i].getName().equals(attrSearch) || (fields[i].isAnnotationPresent(FieldParameter.class)
                         && fields[i].getAnnotation(FieldParameter.class).value().equals(attrSearch))) {
 
                     if (control.isFieldInvalid(fields[i], inputValue, inputName, vC)) {
-                        // System.out.println("yes" + attrSearch + " was invalid");
+                        System.out.println("yes" + attrSearch + " was invalid");
                         break;
                     } else {
                         vC.add(inputName, new MessageValue(inputValue));
                     }
-                    Method mSetter = reference.getClass().getDeclaredMethod(
+                    Method mSetter = reference.getClass().getMethod(
                             "set" + Syntaxe.getSetterGetterNorm(fields[i].getName()),
                             new Class[] { fields[i].getType() });
 
-                    // System.out.println("field" + i + " " + mSetter.getName());
-                    mSetter.invoke(reference, new Convertor().convertInputToParam(inputValue, fields[i].getType()));
-                    return;
+                    mSetter.invoke(reference, new Convertor().convertInputToParam(inputValue, inputName, fields[i].getType(), attrSearch, request));
+                    return; 
                 }
             }
         } catch (Exception e) {
@@ -233,22 +390,40 @@ public class Reflect {
         return ans;
     }
 
-    public Object instanceObjectFromParm(String varName, Parameter[] params) throws Exception {
+    public Field[] getAllFields(Class<?> clazz) {
+        List<Field> fields = new ArrayList<>();
+        collectFields(clazz, fields);
+        return fields.toArray(new Field[0]);
+    }
+
+    private void collectFields(Class<?> clazz, List<Field> fields) {
+        if (clazz == null || clazz == Object.class) return; 
+
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field field : declaredFields) {
+            fields.add(field);
+        }
+
+        collectFields(clazz.getSuperclass(), fields);
+    }
+
+    public Object instanceObjectFromParm(String varName, Parameter param) throws Exception {
         Object obj = new Object();
-        for (int i = 0; i < params.length; i++) {
-            RequestParameter annotation = params[i].getAnnotation(RequestParameter.class);
-            if (annotation != null && varName.equals(annotation.value())) {
-                Class<?> clazz = Class.forName(params[i].getType().getName());
+        RequestParameter annotation = param.getAnnotation(RequestParameter.class);
+        if (annotation != null && varName.equals(annotation.value())) {
+            Type type = param.getParameterizedType();
+            if(type instanceof ParameterizedType) {
+                ParameterizedType parameterizedType =(ParameterizedType) type;
+                Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+                if (actualTypeArguments.length > 0 && actualTypeArguments[0] instanceof Class<?>) {
+                    Class<?> elementType = (Class<?>) actualTypeArguments[0]; // Type des éléments de la liste
+                    Object elementInstance = elementType.getDeclaredConstructor().newInstance(); // Instanciation de l'élément
+                    obj = elementInstance;
+                }
+            }
+            else {
+                Class<?> clazz = Class.forName(param.getType().getName());
                 obj = clazz.getDeclaredConstructor().newInstance();
-                return obj;
-            } else if (varName.equals(params[i].getName())) {
-                Class<?> clazz = Class.forName(params[i].getType().getName());
-                obj = clazz.getDeclaredConstructor().newInstance();
-                return obj;
-            } else {
-                Class<?> clazz = Class.forName(params[i].getType().getName());
-                obj = clazz.getDeclaredConstructor().newInstance();
-                return obj;
             }
         }
         return obj;

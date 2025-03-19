@@ -1,10 +1,7 @@
 package com.itu.myspringframework.servlets;
 
-import java.net.*;
-import java.net.http.HttpRequest;
 import java.io.*;
 import java.lang.reflect.*;
-import java.net.URL;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -37,7 +34,7 @@ public class FrontServlet extends HttpServlet {
         String previousUrl = request.getParameter("origin");
         if (mappings.containsKey(previousUrl)) {
             MyMapping mapping = mappings.get(previousUrl);
-            Method mMatched = this.checkVerbException(mapping, clientVerb, 1);
+            Method mMatched = this.checkVerbException(mapping, clientVerb);
             ModelView mV = (ModelView) mapping.invokeMethode(request, mMatched, this);
             mV.add("dataError", errorHandler);
             this.resolveRequest(mapping, mMatched, request, response, mV);
@@ -124,9 +121,15 @@ public class FrontServlet extends HttpServlet {
                 Parameter[] methodParameters = mConcerned.getParameters();
                 Object invokingObject = clazz.getDeclaredConstructor().newInstance();
 
-                
                 Object[] invokeParams = reflect.prepareInvokeParams(parameterMap,
                         methodParameters, invokingObject, request, rnw);
+
+                // Class<?>[] parameterTypes = mConcerned.getParameterTypes();
+                // System.out.println("Types attendus : " + Arrays.toString(parameterTypes));
+
+                // for (Object param : (Object[]) invokeParams[1]) {
+                //     System.out.println("Type reçu : " + (param != null ? param.getClass() : "null"));
+                // }                
 
                 // case MySession as a field
                 Runnable sessionCallbackAsField = this.checkSessionField(invokingObject, request);
@@ -199,31 +202,46 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    void doRedirect(HttpServletRequest request, HttpServletResponse response, ModelView mv) throws Exception {
+        String newUrl = request.getContextPath() + Util.getPathWithoutRedirect(mv.getUrl());
+        response.sendRedirect(newUrl + mv.generateParameters());
+    }
+
+    void doForward(HttpServletRequest request, HttpServletResponse response, ModelView mv) throws Exception {
+        CharResponseWrapper responseWrapper = new CharResponseWrapper(response);
+        if (!mv.getData().isEmpty()) {
+            HashMap<String, Object> datas = mv.getData();
+            Iterator<String> keys = datas.keySet().iterator();
+            while (keys.hasNext()) {
+                String dataKey = keys.next();
+                request.setAttribute(dataKey, datas.get(dataKey));
+            }
+        }
+        RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+        dispatcher.forward(request, responseWrapper);
+
+        String modifiedContent = responseWrapper.processJspContent(responseWrapper.toString(), request, this);
+        // System.out.println("tafanova anle contenu tq : " + modifiedContent);
+        this.writeModifiedContent(response, modifiedContent);
+    }
+
     void resolveUrl(Object valToHandle, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
         PrintWriter out = response.getWriter();
         response.setContentType("text/html;charset=UTF-8");
+        request.setCharacterEncoding("UTF-8");
 
         if (valToHandle instanceof String) {
             out.println((String) valToHandle);
         } else if (valToHandle instanceof ModelView) {
             ModelView mv = (ModelView) valToHandle;
             try {
-                CharResponseWrapper responseWrapper = new CharResponseWrapper(response);
-                if (!mv.getData().isEmpty()) {
-                    HashMap<String, Object> datas = mv.getData();
-                    Iterator<String> keys = datas.keySet().iterator();
-                    while (keys.hasNext()) {
-                        String dataKey = keys.next();
-                        request.setAttribute(dataKey, datas.get(dataKey));
-                    }
+                if(!Util.isRedirect(mv.getUrl())) {
+                    this.doForward(request, response, mv);
                 }
-                RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
-                dispatcher.forward(request, responseWrapper);
-
-                String modifiedContent = responseWrapper.processJspContent(responseWrapper.toString(), request, this);
-                // System.out.println("tafanova anle contenu tq : " + modifiedContent);
-                this.writeModifiedContent(response, modifiedContent);
+                else {
+                    this.doRedirect(request, response, mv);
+                }
             } catch (Exception e) {
                 throw e;
             }
@@ -263,8 +281,8 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
-    Method checkVerbException(MyMapping map, String verb, int checkingVbm) throws Exception {
-        return map.getVerbMethod(verb, checkingVbm).getMethod();
+    Method checkVerbException(MyMapping map, String verb) throws Exception {
+        return map.getVerbMethod(verb).getMethod();
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -280,13 +298,11 @@ public class FrontServlet extends HttpServlet {
         }
 
         String servletPath = request.getServletPath();
-        int checkingVbm = 1;
-        if(Util.isRedirect(servletPath)) servletPath = Util.getPathWithoutRedirect(servletPath); checkingVbm = 0;
 
         if (mappings.containsKey(servletPath)) {
             MyMapping map = mappings.get(servletPath);
             try {
-                Method mMatched = this.checkVerbException(map, clientVerb, checkingVbm);
+                Method mMatched = this.checkVerbException(map, clientVerb);
                 map.verifyPermission(mMatched, request);
 
                 // sending data to controller's method (url/request body)
@@ -300,12 +316,12 @@ public class FrontServlet extends HttpServlet {
                 RequestDispatcher dispatcher = request
                         .getRequestDispatcher("/WEB-INF/lib/error.jsp");
                 request.setAttribute("error", "ETU002375 : " + e.getLocalizedMessage());
-                // e.printStackTrace();
+                e.printStackTrace();
                 dispatcher.forward(request, response);
             }
 
         } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Url introuvable");
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Url "+servletPath+" introuvable");
         }
     }
 
